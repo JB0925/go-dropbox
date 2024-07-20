@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -25,18 +26,22 @@ func init() {
 	dbName = os.Getenv("DATABASE_URL")
 	loginManager = NewLoginManager(dbName)
 	signupManager = NewSignupManager(dbName)
+	projectManager = NewProjectManager(dbName)
 }
 
 var (
 	dbName string
 	loginManager *LoginManager
 	signupManager *SignupManager
+	projectManager *ProjectManager
+	ErrProjectAlreadyExists = errors.New("Project already exists")
 )
 
 func NewServer() *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/signup", signupUser)
 	mux.HandleFunc("/login", loginUser)
+	mux.HandleFunc("/projects/create", createProject)
 
 	return &http.Server{
 		Handler: mux,
@@ -99,9 +104,9 @@ func signupUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"token": token})
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"token": token})
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
@@ -126,4 +131,39 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(map[string]string{"token": token})
 	w.Header().Set("Content-Type", "application/json")
+}
+
+func createProject(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	auth := r.Header.Get("Authorization")
+	if auth == "" || !verifyToken(auth) {
+		message := "projects.go::createProject - No authorization header provided"
+		log.Default().Println(message)
+		http.Error(w, "No authorization header provided", http.StatusUnauthorized)
+		return
+	}
+
+	var pd ProjectData
+	err := json.NewDecoder(r.Body).Decode(&pd)
+	if err != nil {
+		message := fmt.Sprintf("projects.go::createProject - Error decoding request body: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err = projectManager.createProject(pd); err != nil {
+		message := fmt.Sprintf("projects.go::createProject - Error creating project: %v", err)
+		log.Default().Println(message)
+		if errors.Is(err, ErrProjectAlreadyExists) {
+			http.Error(w, "Project already exists", http.StatusConflict)
+			return
+		}
+
+		http.Error(w, "Error creating project", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }

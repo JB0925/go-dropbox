@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
-	"github.com/golang-jwt/jwt/v4"
 )
 
 var (
@@ -99,22 +97,4 @@ func (sm *SignupManager) createNewUser(username string, password string) bool {
 
 	log.Default().Println("signup.go::createNewUser - New user created successfully")
 	return true
-}
-
-func signJwt(username string) (string, error) {
-	// This function signs a JWT token with the given username
-	claims := &jwt.StandardClaims{
-        ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-        Issuer:    "go-dropbox",
-    }
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	tokenString, err := token.SignedString(jwtSecret)
-    if err != nil {
-        fmt.Println("signup.go::signJwt - Error signing token:", err)
-        return "", err
-    }
-
-	return tokenString, nil
 }
