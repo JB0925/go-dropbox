@@ -1,0 +1,72 @@
+package api
+
+import (
+	"database/sql"
+	"errors"
+	"fmt"
+	"log"
+
+	"golang.org/x/crypto/bcrypt"
+	_ "github.com/lib/pq"
+)
+
+type LoginManager struct {
+	db *sql.DB
+}
+
+func NewLoginManager(dbUrl string) *LoginManager {
+	db := newDb(dbUrl)
+	message := fmt.Sprintf("login.go::NewLoginManager - New LoginManager created with db: %v", dbName)
+	log.Default().Println(message)
+	return &LoginManager{db: db}
+}
+
+// login logs in a user with the given username and password
+// It returns a JWT token if the login is successful, or an error if it fails
+// This is useful in this context if the user has already registered
+// but their last session has expired.
+//
+// @param sd SignupData - the username and password of the user
+// @return string - the JWT token if the login is successful or an error if it fails.
+func (lm *LoginManager) login(sd SignupData, doesUserExist func(string) bool) (string, error) {
+	if isInvalidData(sd) {
+		message := fmt.Sprintf("Invalid data: %v", sd)
+		return "", errors.New(message)
+	}
+
+	if !doesUserExist(sd.Username) {
+		message := fmt.Sprintf("User %s does not exist", sd.Username)
+		return "", errors.New(message)
+	}
+
+	hashedPassword, err := lm.getPassword(sd.Username)
+	if err != nil {
+		return "", err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(sd.Password))
+	if err != nil {
+		return "", err
+	}
+
+	token, err := signJwt(sd.Username)
+	if err != nil {
+		return "", err
+	}
+
+	message := fmt.Sprintf("login.go::Login - User %s logged in successfully", sd.Username)
+	log.Default().Println(message)
+	return token, nil
+}
+
+func (lm *LoginManager) getPassword(username string) (string, error) {
+	var password string
+	err := lm.db.QueryRow(getPasswordQuery, username).Scan(&password)
+	if err != nil {
+		message := fmt.Sprintf("login.go::getPassword - Error querying database: %v", err)
+		log.Default().Println(message)
+		return "", err
+	}
+
+	return password, nil
+}

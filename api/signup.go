@@ -1,9 +1,9 @@
 package api
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
-	"database/sql"
 	"log"
 	"time"
 
@@ -13,7 +13,6 @@ import (
 
 var (
 	jwtSecret = []byte("18yr6!b3@3r7")
-	db *sql.DB
 )
 
 type SignupData struct {
@@ -21,21 +20,18 @@ type SignupData struct {
 	Password string `json:"password"`
 }
 
-func init() {
-	// Initialize the database connection
-	var err error
-	db, err = sql.Open("postgres", dbName)
-	if err != nil {
-		log.Fatal("signup.go::init - Error opening database connection: ", err)
-	}
-
-	err = db.Ping()
-	if err != nil {
-		log.Fatal("signup.go::init - Error pinging database: ", err)
-	}
+type SignupManager struct {
+	db *sql.DB
 }
 
-func signup(sd SignupData) (string, error) {
+func NewSignupManager(dbUrl string) *SignupManager {
+	db := newDb(dbUrl)
+	message := fmt.Sprintf("signup.go::NewSignupManager - New SignupManager created with db: %v", dbUrl)
+	log.Default().Println(message)
+	return &SignupManager{db: db}
+}
+
+func (sm *SignupManager) signup(sd SignupData) (string, error) {
 	// This function would check the database for a duplicate username
 	hashedPassword, err := hashPassword(sd.Password)
 	if err != nil {
@@ -43,7 +39,7 @@ func signup(sd SignupData) (string, error) {
 		return "", err
 	}
 
-	if !createNewUser(sd.Username, hashedPassword) {
+	if !sm.createNewUser(sd.Username, hashedPassword) {
 		// logging occurs in the createNewUser function
 		return "", errors.New("Error creating new user")
 	}
@@ -59,8 +55,8 @@ func signup(sd SignupData) (string, error) {
 	return token, nil
 }
 
-func doesUserExist(username string) bool {
-	rows, err := db.Query(checkUserExistsQuery, username)
+func (sm *SignupManager) doesUserExist(username string) bool {
+	rows, err := sm.db.Query(checkUserExistsQuery, username)
 	if err != nil {
 		log.Default().Println("signup.go::doesUserExist - Error checking if user exists: ", err)
 		return true
@@ -92,10 +88,10 @@ func hashPassword(password string) (string, error) {
 	return string(hashedPassword), nil
 }
 
-func createNewUser(username string, password string) bool {
+func (sm *SignupManager) createNewUser(username string, password string) bool {
 	// This function would create a new user in the database
 	// with the given username and hashed password.
-	_, err := db.Exec(createNewUserQuery, username, password)
+	_, err := sm.db.Exec(createNewUserQuery, username, password)
 	if err != nil {
 		log.Default().Println("signup.go::createNewUser - Error creating new user: ", err)
 		return false

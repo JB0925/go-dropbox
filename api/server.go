@@ -9,16 +9,34 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
-const (
-	dbName = "postgresql:///dropbox?sslmode=disable"
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		err = godotenv.Load("../.env")
+		if err != nil {
+			 log.Default().Fatal("Error loading .env file")
+		}
+	}
+
+	dbName = os.Getenv("DATABASE_URL")
+	loginManager = NewLoginManager(dbName)
+	signupManager = NewSignupManager(dbName)
+}
+
+var (
+	dbName string
+	loginManager *LoginManager
+	signupManager *SignupManager
 )
 
 func NewServer() *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/signup", signupUser)
+	mux.HandleFunc("/login", loginUser)
 
 	return &http.Server{
 		Handler: mux,
@@ -66,14 +84,14 @@ func signupUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if doesUserExist(sd.Username) {
+	if signupManager.doesUserExist(sd.Username) {
 		message := fmt.Sprintf("signup.go::signup - User with username %s already exists", sd.Username)
 		log.Default().Println(message)
 		http.Error(w, "User already exists", http.StatusConflict)
 		return
 	}
 
-	token, err := signup(sd)
+	token, err := signupManager.signup(sd)
 	if err != nil {
 		message := fmt.Sprintf("signup.go::signup - Error signing up: %v", err)
 		log.Default().Println(message)
@@ -84,4 +102,28 @@ func signupUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"token": token})
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+}
+
+func loginUser(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	var sd SignupData
+	err := json.NewDecoder(r.Body).Decode(&sd)
+	if err != nil {
+		message := fmt.Sprintf("login.go::login - Error decoding request body: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	token, err := loginManager.login(sd, signupManager.doesUserExist)
+	if err != nil {
+		message := fmt.Sprintf("login.go::login - Error logging in: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error logging in", http.StatusUnauthorized)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{"token": token})
+	w.Header().Set("Content-Type", "application/json")
 }
