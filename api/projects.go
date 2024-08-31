@@ -32,7 +32,7 @@ func NewProjectManager(dbUrl string) *ProjectManager {
 
 func (pm *ProjectManager) createProject(pd ProjectData) error {
 	userId, err := pm.getUserId(pd.Username)
-	if err != nil {
+	if err != nil || userId == 0 {
 		return err
 	}
 

@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
 
@@ -30,13 +29,11 @@ func NewLoginManager(dbUrl string) *LoginManager {
 // @return string - the JWT token if the login is successful or an error if it fails.
 func (lm *LoginManager) login(sd SignupData, doesUserExist func(string) bool) (string, error) {
 	if isInvalidData(sd) {
-		message := fmt.Sprintf("Invalid data: %v", sd)
-		return "", errors.New(message)
+		return "", ErrInvalidData
 	}
 
 	if !doesUserExist(sd.Username) {
-		message := fmt.Sprintf("User %s does not exist", sd.Username)
-		return "", errors.New(message)
+	    return "", ErrUserDoesNotExist	
 	}
 
 	hashedPassword, err := lm.getPassword(sd.Username)
@@ -46,7 +43,7 @@ func (lm *LoginManager) login(sd SignupData, doesUserExist func(string) bool) (s
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(sd.Password))
 	if err != nil {
-		return "", err
+		return "", ErrWrongPassword
 	}
 
 	token, err := signJwt(sd.Username)

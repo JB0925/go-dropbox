@@ -31,13 +31,13 @@ func NewSignupManager(dbUrl string) *SignupManager {
 
 func (sm *SignupManager) signup(sd SignupData) (string, error) {
 	// This function would check the database for a duplicate username
-	hashedPassword, err := hashPassword(sd.Password)
+	hashedPassword, err := sm.hashPassword(sd.Password)
 	if err != nil {
 		// logging occurs in the hashPassword function
 		return "", err
 	}
 
-	if !sm.createNewUser(sd.Username, hashedPassword) {
+	if err = sm.createNewUser(sd.Username, hashedPassword); err != nil {
 		// logging occurs in the createNewUser function
 		return "", errors.New("Error creating new user")
 	}
@@ -73,7 +73,7 @@ func (sm *SignupManager) doesUserExist(username string) bool {
 	return false
 }
 
-func hashPassword(password string) (string, error) {
+func (sm *SignupManager) hashPassword(password string) (string, error) {
 	// A check is done earlier to ensure that the password is not empty.
 	// This function would hash the password and return the hashed password.
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -86,15 +86,15 @@ func hashPassword(password string) (string, error) {
 	return string(hashedPassword), nil
 }
 
-func (sm *SignupManager) createNewUser(username string, password string) bool {
+func (sm *SignupManager) createNewUser(username string, password string) error {
 	// This function would create a new user in the database
 	// with the given username and hashed password.
 	_, err := sm.db.Exec(createNewUserQuery, username, password)
 	if err != nil {
 		log.Default().Println("signup.go::createNewUser - Error creating new user: ", err)
-		return false
+		return errors.New("Error creating new user")
 	}
 
 	log.Default().Println("signup.go::createNewUser - New user created successfully")
-	return true
+	return nil
 }

@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/joho/godotenv"
@@ -27,6 +29,7 @@ func init() {
 	loginManager = NewLoginManager(dbName)
 	signupManager = NewSignupManager(dbName)
 	projectManager = NewProjectManager(dbName)
+	fileManager = NewFileManager(dbName)
 }
 
 var (
@@ -34,6 +37,7 @@ var (
 	loginManager *LoginManager
 	signupManager *SignupManager
 	projectManager *ProjectManager
+	fileManager *FileManager
 	ErrProjectAlreadyExists = errors.New("Project already exists")
 )
 
@@ -41,7 +45,9 @@ func NewServer() *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/signup", signupUser)
 	mux.HandleFunc("/login", loginUser)
-	mux.HandleFunc("/projects/create", createProject)
+	mux.HandleFunc("/projects/create", checkAuth(http.HandlerFunc(createProject)))
+	mux.HandleFunc("/files/upload", checkAuth(http.HandlerFunc(uploadFile)))
+	mux.HandleFunc("/files/get", checkAuth(http.HandlerFunc(downloadFile)))
 
 	return &http.Server{
 		Handler: mux,
@@ -100,7 +106,7 @@ func signupUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("signup.go::signup - Error signing up: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error signing up", http.StatusInternalServerError)
+		http.Error(w, "Error signing up", getErrorCode(err))
 		return
 	}
 
@@ -117,7 +123,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("login.go::login - Error decoding request body: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		http.Error(w, "Invalid request body", getErrorCode(err))
 		return
 	}
 
@@ -125,7 +131,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("login.go::login - Error logging in: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error logging in", http.StatusUnauthorized)
+		http.Error(w, "Error logging in", getErrorCode(err))
 		return
 	}
 
@@ -135,14 +141,6 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 
 func createProject(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-
-	auth := r.Header.Get("Authorization")
-	if auth == "" || !verifyToken(auth) {
-		message := "projects.go::createProject - No authorization header provided"
-		log.Default().Println(message)
-		http.Error(w, "No authorization header provided", http.StatusUnauthorized)
-		return
-	}
 
 	var pd ProjectData
 	err := json.NewDecoder(r.Body).Decode(&pd)
@@ -156,14 +154,99 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 	if err = projectManager.createProject(pd); err != nil {
 		message := fmt.Sprintf("projects.go::createProject - Error creating project: %v", err)
 		log.Default().Println(message)
-		if errors.Is(err, ErrProjectAlreadyExists) {
-			http.Error(w, "Project already exists", http.StatusConflict)
-			return
-		}
+		http.Error(w, "Error creating project", getErrorCode(err))
+	}
 
-		http.Error(w, "Error creating project", http.StatusInternalServerError)
+	w.WriteHeader(http.StatusCreated)
+}
+
+func uploadFile(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	err := r.ParseMultipartForm(10 << 20) // 10MB
+    if err != nil {
+        http.Error(w, "Unable to parse form", http.StatusBadRequest)
+        return
+    }
+
+	userName := r.Header.Get("X-GO-DROPBOX-USER")
+	log.Default().Printf("files.go::upload - User %s is uploading a file\n", userName)
+
+	path := r.FormValue("path")
+	name := r.FormValue("name")
+	projectName := r.FormValue("project_name")
+
+	if userName == "" || projectName == "" || name == "" || path == "" {
+		message := fmt.Sprintf("files.go::upload - Missing required fields: %s, %s, %s, %s", userName, projectName, name, path)
+		log.Default().Println(message)
+		http.Error(w, "Missing required fields", getErrorCode(ErrMissingRequiredFields))
+		return
+	}
+
+	w.Header().Set("Authorization", "Success")
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		message := fmt.Sprintf("files.go::upload - Error getting file: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error getting file", getErrorCode(err))
+		return
+	}
+
+	defer file.Close()
+
+	fc, err := io.ReadAll(file)
+	if err != nil {
+		message := fmt.Sprintf("files.go::upload - Error reading file: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error reading file", getErrorCode(err))
+		return
+	}
+
+	log.Default().Printf("Got file %s of content length %d\n", name, len(fc))
+
+	fd := FileData{
+		Name: name,
+		Path: path,
+		ProjectName: projectName,
+	}
+
+	if err = fileManager.upload(fd, userName, fc); err != nil {
+		message := fmt.Sprintf("files.go::upload - Error uploading file: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error uploading file", getErrorCode(err))
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
+}
+
+func downloadFile(w http.ResponseWriter, r *http.Request) {
+	fileName := r.URL.Query().Get("name")
+	projectName := r.URL.Query().Get("project_name")
+
+	if fileName == "" || projectName == "" {
+		message := fmt.Sprintf("files.go::getFile - Missing required fields: fileName =  %s, projectName = %s", fileName, projectName)
+		log.Default().Println(message)
+		http.Error(w, "Missing required fields", getErrorCode(ErrMissingRequiredFields))
+		return
+	}
+
+	message := fmt.Sprintf("files.go::getFile - Getting file %s from project %s", fileName, projectName)
+	log.Default().Println(message)
+
+	userName := r.Header.Get("X-GO-DROPBOX-USER")
+	file, err := fileManager.download(projectName, fileName, userName)
+	if err != nil {
+		message := fmt.Sprintf("files.go::getFile - Error getting file: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error getting file", getErrorCode(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Length", strconv.Itoa(len(file)))
+	w.Write(file)	
 }

@@ -1,0 +1,287 @@
+package api
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"log"
+)
+
+type FileData struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+	ProjectName string `json:"project_name"`
+}
+
+type FileManager struct {
+	db *sql.DB
+}
+
+func NewFileManager(dbUrl string) *FileManager {
+	db := newDb(dbUrl)
+	message := fmt.Sprintf("files.go::NewFileManager - New FileManager created with db: %v", dbUrl)
+	log.Default().Println(message)
+	return &FileManager{db: db}
+}
+
+func (fm FileManager) upload(fd FileData, username string, fileContent []byte) error {
+	// This function checks the database for a duplicate file name
+	// and then upload the file to the database.
+	// It returns an error if the file already exists
+	// or if there was an error uploading the file.
+	//
+	// @param: fd FileData - the file data to be uploaded, taken from the request body
+	// @param: username string - the username of the user uploading the file
+	// @param: fileContent []byte - the content of the file to be uploaded
+	// @return: An error if one exists
+	projectId, userId, dirs, err := fm.getFileOwnerData(fd.ProjectName, username)
+	if err != nil {
+		return err
+	}
+
+	exists, err := fm.doesFileExist(projectId, userId, fd.Name)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		log.Default().Println("files.go::upload - File already exists")
+		return ErrorFileAlreadyExists
+	}
+
+	// TODO: Refactor to include the placing of the file in a new/existing directory
+	directories, err := fm.parseDirectories(dirs)
+	if err != nil {
+		message := fmt.Sprintf("files.go::upload - Error parsing directories: %v", err)
+		log.Default().Println(message)
+		return err
+	}
+
+	// TODO: Remove this log statement
+	log.Default().Println("files.go::upload - Directories: ", directories)
+
+	err = fm.storeFile(fd, fileContent, projectId, userId)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fm FileManager) download(projectName, fileName, userName string) ([]byte, error) {
+	// This function gets the file content from the database
+	// and returns an error if the file does not exist.
+	//
+	// @param: projectName string - the name of the project
+	// @param: fileName string - the name of the file
+	// @return: []byte - the content of the file
+	// @return: error - An error if one exists
+	var data []byte
+	var fileUserId int
+	err := fm.db.QueryRow(getFileQuery, fileName, projectName).Scan(&data, &fileUserId)
+	if err != nil {
+		message := fmt.Sprintf("files.go::get - Error querying database: %v", err)
+		log.Default().Println(message)
+		return nil, err
+	}
+
+	if len(data) == 0 {
+		return nil, ErrFileDoesNotExist
+	}
+
+	userId, err := fm.getUserId(userName)
+	if err != nil {
+		message := fmt.Sprintf("files.go::get - Error getting user id: %v", err)
+		log.Default().Println(message)
+		return nil, err
+	}
+
+	if fileUserId != userId {
+		message := fmt.Sprintf("files.go::get - User with id %d does not have access file %s", userId, fileName)
+		log.Default().Println(message)
+		return nil, ErrUserNoAccessToFile
+	}
+
+	return data, nil
+}
+
+func (fm FileManager) getProjectIdAndDirectories(projectName string) (int, []byte, error) {
+	// This function gets the project id and directories from the database
+	// and returns an error if the project does not exist.
+	//
+	// @param: projectName string - the name of the project
+	// @return: int - the project id
+	// @return: []byte - the directories of the project
+	// @return: error - An error if one exists
+	rows, err := fm.db.Query(getProjectIdQuery, projectName)
+	if err != nil {
+		message := fmt.Sprintf("files.go::getProjectId - Error querying database: %v", err)
+		log.Default().Println(message)
+		return 0, []byte{}, err
+	}
+
+	defer rows.Close()
+
+	var projectId int
+	var directories []byte
+	if rows.Next() {
+		err = rows.Scan(&projectId, &directories)
+		if err != nil {
+			message := fmt.Sprintf("files.go::getProjectId - Error scanning database: %v", err)
+			log.Default().Println(message)
+			return 0, []byte{}, err
+		}
+
+		return projectId, directories, nil
+	}
+
+	return 0, []byte{}, ErrProjectDoesNotExist
+}
+
+func (fm *FileManager) getUserId(username string) (int, error) {
+	// Given a username, this function queries the database
+	// and gets the user id of the associated username if it exists.
+	// It returns an error if the user does not exist.
+	//
+	// @param: username string - the username of the user
+	// @return: int - the user id
+	// @return: error - An error if one exists
+	var userId int
+	err := fm.db.QueryRow(getUserQuery, username).Scan(&userId)
+	if err != nil {
+		message := fmt.Sprintf("projects.go::getUserId - Error querying database: %v", err)
+		log.Default().Println(message)
+		return 0, err
+	}
+
+	return userId, nil
+}
+
+func (fm *FileManager) doesFileExist(project_id, user_id int, fileName string) (bool, error) {
+	// This function checks the database for the file
+	// and return true if the file exists
+	// and false if the file does not exist.
+	// It also returns an error - nil if no error exists, the error if one does exist.
+	//
+	// @param: project_id int - the project id of the file
+	// @param: user_id int - the user id of the file
+	// @return: bool - true if the file exists, false if it does not
+	// @return: error - An error if one exists
+	rows, err := fm.db.Query(checkFileExistsQuery, project_id, user_id, fileName)
+	if err != nil {
+		message := fmt.Sprintf("files.go::doesFileExist - Error querying database: %v", err)
+		log.Default().Println(message)
+		return false, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (fm *FileManager) getDirectories(projectId int) ([]byte, error) {
+	// *** DEPRECATED ***
+	// Gets the directories map associated with the project. 
+	// Is not needed as the directories are taken as a part of another query,
+	// thus avoiding an extra call to the database.
+	var directories []byte
+	err := fm.db.QueryRow(getProjectDirectoriesQuery, projectId).Scan(&directories)
+	if err != nil {
+		message := fmt.Sprintf("files.go::getDirectories - Error querying database: %v", err)
+		log.Default().Println(message)
+		return nil, err
+	}
+
+	return directories, nil
+}
+
+func (fm *FileManager) parseDirectories(directories []byte) (map[string]interface{}, error) {
+	// This function parses the directories from the database
+	// and turns them into JSON from a byte slice.
+	//
+	// @param: directories []byte - the directories from the database
+	// @return: map[string]interface{} - the parsed directories
+	// @return: error - An error if one exists
+	var dirs map[string]interface{}
+	err := json.Unmarshal(directories, &dirs)
+
+	if err != nil {
+		message := fmt.Sprintf("files.go::parseDirectories - Error unmarshalling directories: %v", err)
+		log.Default().Println(message)
+		return nil, err
+	}
+
+	return dirs, nil
+}
+
+func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, filePath, fileName string) error {
+	for k, v := range directories {
+		if k == filePath {
+			if v, ok := v.(map[string]interface{}); ok {
+				if dir, ok := v[filePath]; ok {
+					v[filePath] = append(dir.([]string), fileName)
+				} else {
+					v[filePath] = []string{fileName}
+				}
+			}
+
+			return nil
+		}
+
+		if v, ok := v.(map[string]interface{}); ok {
+			if err := fm.findAndInsertPath(v, filePath, fileName); err == nil {
+				errorMessage := fmt.Errorf("files.go::findAndInsertPath - Error finding path: %w", err)
+				log.Default().Println(errorMessage)
+				return errorMessage
+			}
+		}
+	}
+
+	return nil
+}
+
+func (fm *FileManager) getFileOwnerData(projectName, username string) (int, int, []byte, error) {
+	// One function to get several aspects of user and project related data,
+	// such as the project id, user id, and directories.
+	//
+	// @param: projectName string - the name of the project
+	// @param: username string - the username of the user
+	// @return: int - the project id
+	// @return: int - the user id
+	// @return: []byte - the directories of the project
+	// @return: error - An error if one exists
+	projectId, directories, err := fm.getProjectIdAndDirectories(projectName)
+	if err != nil {
+		return 0, 0, []byte{}, err
+	}
+
+	userId, err := fm.getUserId(username)
+	if err != nil {
+		return 0, 0, []byte{}, err
+	}
+
+	return projectId, userId, directories, nil
+}
+
+func (fm *FileManager) storeFile(fd FileData, fileContent []byte, projectId, userId int) error {
+	// A wrapper method used to call a database and store the contents of a file
+	// and its related metadata.
+	//
+	// @param: fd FileData - the file data to be uploaded
+	// @param: fileContent []byte - the content of the file to be uploaded
+	// @param: projectId int - the project id of the file
+	// @param: userId int - the user id of the file
+	// @return: error - An error if one exists
+	_, err := fm.db.Exec(uploadFileQuery, fd.Name, fd.Path, fd.ProjectName, fileContent, userId, projectId)
+	if err != nil {
+		message := fmt.Sprintf("files.go::upload - Error uploading file: %v", err)
+		log.Default().Println(message)
+		return err
+	}
+
+	return nil
+}
