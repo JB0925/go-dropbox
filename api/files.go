@@ -239,8 +239,10 @@ func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, fil
 		return ErrInvalidPath
 	}
 
+	// Traverse the directories map to find the correct path
 	current := directories
 
+	// Loop over each directory in the file path that the user gave
 	for _, segment := range segments {
 		if _, exists := current[segment]; !exists {
 			// Create the new directory if it does not exist
@@ -248,6 +250,8 @@ func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, fil
 				"files": []interface{}{},
 			}
 		}
+		
+		// Move to the next directory
 		current = current[segment].(map[string]interface{})
 	}
 
