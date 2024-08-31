@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 )
 
 type FileData struct {
@@ -57,11 +58,25 @@ func (fm FileManager) upload(fd FileData, username string, fileContent []byte) e
 		return err
 	}
 
-	// TODO: Remove this log statement
+	err = fm.findAndInsertPath(directories, fd.Path, fd.Name)
+	if err != nil {
+		message := fmt.Sprintf("files.go::upload - Error finding and inserting path: %v", err)
+		log.Default().Println(message)
+		return err
+	}
+
 	log.Default().Println("files.go::upload - Directories: ", directories)
+	err = fm.updateProjectStructure(projectId, directories)
+	if err != nil {
+		message := fmt.Sprintf("files.go::upload - Error updating project structure: %v", err)
+		log.Default().Println(message)
+		return err
+	}
 
 	err = fm.storeFile(fd, fileContent, projectId, userId)
 	if err != nil {
+		message := fmt.Sprintf("files.go::upload - Error storing file: %v", err)
+		log.Default().Println(message)
 		return err
 	}
 
@@ -219,26 +234,47 @@ func (fm *FileManager) parseDirectories(directories []byte) (map[string]interfac
 }
 
 func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, filePath, fileName string) error {
-	for k, v := range directories {
-		if k == filePath {
-			if v, ok := v.(map[string]interface{}); ok {
-				if dir, ok := v[filePath]; ok {
-					v[filePath] = append(dir.([]string), fileName)
-				} else {
-					v[filePath] = []string{fileName}
-				}
-			}
+	segments := strings.Split(strings.Trim(filePath, "/"), "/")
+	if segments[0] != "root" {
+		return ErrInvalidPath
+	}
 
-			return nil
-		}
+	current := directories
 
-		if v, ok := v.(map[string]interface{}); ok {
-			if err := fm.findAndInsertPath(v, filePath, fileName); err == nil {
-				errorMessage := fmt.Errorf("files.go::findAndInsertPath - Error finding path: %w", err)
-				log.Default().Println(errorMessage)
-				return errorMessage
+	for _, segment := range segments {
+		if _, exists := current[segment]; !exists {
+			// Create the new directory if it does not exist
+			current[segment] = map[string]interface{}{
+				"files": []interface{}{},
 			}
 		}
+		current = current[segment].(map[string]interface{})
+	}
+
+	// Append the file to the "files" array - or create a new one if it does not exist
+	if files, ok := current["files"].([]interface{}); ok {
+		current["files"] = append(files, fileName)
+	} else {
+		current["files"] = []interface{}{fileName}
+	}
+
+	return nil
+}
+
+func (fm *FileManager) updateProjectStructure(projectId int, directories map[string]interface{}) error {
+	// This function updates the project structure in the database
+	directoriesToJson, err := json.Marshal(directories)
+	if err != nil {
+		message := fmt.Sprintf("files.go::updateProjectStructure - Error marshalling directories: %v", err)
+		log.Default().Println(message)
+		return err
+	}
+
+	_, err = fm.db.Exec(updateProjectDirectoryQuery, directoriesToJson, projectId)
+	if err != nil {
+		message := fmt.Sprintf("files.go::updateProjectStructure - Error updating project structure: %v", err)
+		log.Default().Println(message)
+		return err
 	}
 
 	return nil

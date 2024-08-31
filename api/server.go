@@ -47,7 +47,7 @@ func NewServer() *http.Server {
 	mux.HandleFunc("/login", loginUser)
 	mux.HandleFunc("/projects/create", checkAuth(http.HandlerFunc(createProject)))
 	mux.HandleFunc("/files/upload", checkAuth(http.HandlerFunc(uploadFile)))
-	mux.HandleFunc("/files/get", checkAuth(http.HandlerFunc(downloadFile)))
+	mux.HandleFunc("/files/download", checkAuth(http.HandlerFunc(downloadFile)))
 
 	return &http.Server{
 		Handler: mux,

@@ -12,3 +12,4 @@ const checkFileExistsQuery = `SELECT id FROM files WHERE project_id = $1 AND use
 const getFilesQuery = `SELECT id FROM files WHERE project_id = $1 AND user_id = $2`
 const getProjectDirectoriesQuery = `SELECT directories FROM projects WHERE id = $1`
 const getFileQuery = `SELECT data, user_id FROM files WHERE name = $1 AND project_name = $2`
+const updateProjectDirectoryQuery = `UPDATE projects SET directories = $1 WHERE id = $2`

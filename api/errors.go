@@ -12,4 +12,5 @@ var (
 	ErrUserAlreadyExists = errors.New("User already exists")
 	ErrInvalidData = errors.New("Invalid data")
 	ErrWrongPassword = errors.New("Wrong password")
+	ErrInvalidPath = errors.New("Invalid path")
 )
