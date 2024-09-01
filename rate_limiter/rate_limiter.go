@@ -32,7 +32,7 @@ func NewRateLimiter(
 
 	return &RateLimiter{
 		MaxRequests: maxRequests,
-		IncrementAmount: 2,
+		IncrementAmount: incrementAmount,
 		RefreshDuration:    refreshDuration,
 		Requests:    make(map[string]int),
 	}
