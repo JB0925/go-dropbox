@@ -117,7 +117,7 @@ func (fm FileManager) download(projectName, fileName, userName string) ([]byte, 
 	if fileUserId != userId {
 		message := fmt.Sprintf("files.go::get - User with id %d does not have access file %s", userId, fileName)
 		log.Default().Println(message)
-		return nil, ErrUserNoAccessToFile
+		return nil, ErrUnauthorized
 	}
 
 	return data, nil

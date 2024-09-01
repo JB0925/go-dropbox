@@ -27,3 +27,8 @@ curl -kv http://localhost:8080/files/upload -H 'content-type: multipart/form-dat
 ```
 curl -kv "http://localhost:8080/files/download?name=YESLogo2.png&project_name=foo" -H 'Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjUxNDA5NjEsImlzcyI6Implc3NlYiJ9.yaXz7O6llUhFKEZCxS0Mr2ps8lUHSaQC0eQq8I59EPE' -o YESLogo2.png
 ```
+
+## View a Project
+```
+curl -kv "http://localhost:8080/projects/view?project_name=foo" -H 'content-type: application/json' -H 'Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjUyNDYyMjIsImlzcyI6Implc3NlYiJ9.-bRqHr0JGEQUqAEtEmoAsxLqOckD828iHVyV82Db6CY' | jq -r '.project' | jq
+```

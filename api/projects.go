@@ -84,3 +84,26 @@ func (pm *ProjectManager) doesProjectExist(name string) bool {
 
 	return rows.Next()
 }
+
+func (pm *ProjectManager) viewProject(projectName, userName string) ([]byte, error) {
+	userId, err := pm.getUserId(userName)
+	if err != nil || userId == 0 {
+		return nil, err
+	}
+
+	var projectDirectories []byte
+
+	err = pm.db.QueryRow(viewProjectQuery, projectName, userId).Scan(&projectDirectories)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrProjectDoesNotExist
+		}
+
+		message := fmt.Sprintf("projects.go::viewProject - Error querying database: %v", err)
+		log.Default().Println(message)
+		return nil, err
+	}
+
+	log.Default().Printf("projects.go::viewProject - Project %s viewed successfully for user %s\n", projectName, userName)
+	return projectDirectories, nil
+}

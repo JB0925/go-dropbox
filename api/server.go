@@ -46,6 +46,7 @@ func NewServer() *http.Server {
 	mux.HandleFunc("/signup", signupUser)
 	mux.HandleFunc("/login", loginUser)
 	mux.HandleFunc("/projects/create", checkAuth(http.HandlerFunc(createProject)))
+	mux.HandleFunc("/projects/view", checkAuth(http.HandlerFunc(viewProject)))
 	mux.HandleFunc("/files/upload", checkAuth(http.HandlerFunc(uploadFile)))
 	mux.HandleFunc("/files/download", checkAuth(http.HandlerFunc(downloadFile)))
 
@@ -158,6 +159,30 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
+}
+
+func viewProject(w http.ResponseWriter, r *http.Request) {
+	projectName := r.URL.Query().Get("project_name")
+	if projectName == "" {
+		message := fmt.Sprintf("projects.go::viewProject - Missing required field: projectName = %s", projectName)
+		log.Default().Println(message)
+		http.Error(w, "Missing required field", getErrorCode(ErrMissingRequiredFields))
+		return
+	}
+
+	userName := r.Header.Get("X-GO-DROPBOX-USER")
+	project, err := projectManager.viewProject(projectName, userName)
+
+	if err != nil {
+		message := fmt.Sprintf("projects.go::viewProject - Error viewing project: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error viewing project", getErrorCode(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{"project": string(project)})
+	w.Header().Set("Content-Type", "application/json")
 }
 
 func uploadFile(w http.ResponseWriter, r *http.Request) {

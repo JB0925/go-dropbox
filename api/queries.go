@@ -13,3 +13,4 @@ const getFilesQuery = `SELECT id FROM files WHERE project_id = $1 AND user_id = 
 const getProjectDirectoriesQuery = `SELECT directories FROM projects WHERE id = $1`
 const getFileQuery = `SELECT data, user_id FROM files WHERE name = $1 AND project_name = $2`
 const updateProjectDirectoryQuery = `UPDATE projects SET directories = $1, mtime = $3 WHERE id = $2`
+const viewProjectQuery = `SELECT directories FROM projects WHERE project_name = $1 and user_id = $2`
