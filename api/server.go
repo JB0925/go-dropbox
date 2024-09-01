@@ -11,9 +11,12 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+
+	"github.com/jbrink/go-dropbox/rate_limiter"
 )
 
 func init() {
@@ -39,16 +42,17 @@ var (
 	projectManager *ProjectManager
 	fileManager *FileManager
 	ErrProjectAlreadyExists = errors.New("Project already exists")
+	rateLimiter = rate_limiter.NewRateLimiter(5, 30 * time.Second, 2)
 )
 
 func NewServer() *http.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/signup", signupUser)
-	mux.HandleFunc("/login", loginUser)
-	mux.HandleFunc("/projects/create", checkAuth(http.HandlerFunc(createProject)))
-	mux.HandleFunc("/projects/view", checkAuth(http.HandlerFunc(viewProject)))
-	mux.HandleFunc("/files/upload", checkAuth(http.HandlerFunc(uploadFile)))
-	mux.HandleFunc("/files/download", checkAuth(http.HandlerFunc(downloadFile)))
+	mux.HandleFunc("/signup", rateLimiter.RateLimit(http.HandlerFunc(signupUser)))
+	mux.HandleFunc("/login", rateLimiter.RateLimit(http.HandlerFunc(loginUser)))
+	mux.HandleFunc("/projects/create", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(createProject))))
+	mux.HandleFunc("/projects/view", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(viewProject))))
+	mux.HandleFunc("/files/upload", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(uploadFile))))
+	mux.HandleFunc("/files/download", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(downloadFile))))
 
 	return &http.Server{
 		Handler: mux,
@@ -58,6 +62,8 @@ func NewServer() *http.Server {
 
 func StartServer(s *http.Server) error {
 	// Try to start the server and run it in a goroutine so that multiple requests can be handled concurrently
+	go rateLimiter.Refresh()  // Start the rate limiter
+
 	var e error
 	go func() {
 		log.Default().Println("server::Start - Starting server on port 8080")
