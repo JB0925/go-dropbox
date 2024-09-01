@@ -13,6 +13,7 @@ curl -kv http://localhost:8080/login -H 'content-type: application/json' -d '{"u
 ## Create a Project
 ```
 curl -kv "http://localhost:8080/projects/create" -H 'content-type: application/json' -H 'Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjUyNDYyMjIsImlzcyI6Implc3NlYiJ9.-bRqHr0JGEQUqAEtEmoAsxLqOckD828iHVyV82Db6CY' -d '{"username": "jesseb", "name": "foo", "directories": {"root": {"files": [], "bar": {"files": []}}}}'
+```
 
 ## Create a File
 - must belong to a project
