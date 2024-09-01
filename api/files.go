@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 )
 
 type FileData struct {
@@ -66,16 +67,18 @@ func (fm FileManager) upload(fd FileData, username string, fileContent []byte) e
 	}
 
 	log.Default().Println("files.go::upload - Directories: ", directories)
-	err = fm.updateProjectStructure(projectId, directories)
+
+	timestamp := time.Now().Unix()
+	err = fm.storeFile(fd, fileContent, projectId, userId, timestamp)
 	if err != nil {
-		message := fmt.Sprintf("files.go::upload - Error updating project structure: %v", err)
+		message := fmt.Sprintf("files.go::upload - Error storing file: %v", err)
 		log.Default().Println(message)
 		return err
 	}
 
-	err = fm.storeFile(fd, fileContent, projectId, userId)
+	err = fm.updateProjectStructure(projectId, directories, timestamp)
 	if err != nil {
-		message := fmt.Sprintf("files.go::upload - Error storing file: %v", err)
+		message := fmt.Sprintf("files.go::upload - Error updating project structure: %v", err)
 		log.Default().Println(message)
 		return err
 	}
@@ -265,7 +268,10 @@ func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, fil
 	return nil
 }
 
-func (fm *FileManager) updateProjectStructure(projectId int, directories map[string]interface{}) error {
+func (fm *FileManager) updateProjectStructure(
+	projectId int, 
+	directories map[string]interface{}, 
+	timestamp int64) error {
 	// This function updates the project structure in the database
 	directoriesToJson, err := json.Marshal(directories)
 	if err != nil {
@@ -274,7 +280,7 @@ func (fm *FileManager) updateProjectStructure(projectId int, directories map[str
 		return err
 	}
 
-	_, err = fm.db.Exec(updateProjectDirectoryQuery, directoriesToJson, projectId)
+	_, err = fm.db.Exec(updateProjectDirectoryQuery, directoriesToJson, projectId, timestamp)
 	if err != nil {
 		message := fmt.Sprintf("files.go::updateProjectStructure - Error updating project structure: %v", err)
 		log.Default().Println(message)
@@ -307,7 +313,12 @@ func (fm *FileManager) getFileOwnerData(projectName, username string) (int, int,
 	return projectId, userId, directories, nil
 }
 
-func (fm *FileManager) storeFile(fd FileData, fileContent []byte, projectId, userId int) error {
+func (fm *FileManager) storeFile(
+	fd FileData, 
+	fileContent []byte, 
+	projectId, 
+	userId int, 
+	timestamp int64) error {
 	// A wrapper method used to call a database and store the contents of a file
 	// and its related metadata.
 	//
@@ -316,7 +327,17 @@ func (fm *FileManager) storeFile(fd FileData, fileContent []byte, projectId, use
 	// @param: projectId int - the project id of the file
 	// @param: userId int - the user id of the file
 	// @return: error - An error if one exists
-	_, err := fm.db.Exec(uploadFileQuery, fd.Name, fd.Path, fd.ProjectName, fileContent, userId, projectId)
+	_, err := fm.db.Exec(
+		uploadFileQuery, 
+		fd.Name, 
+		fd.Path, 
+		fd.ProjectName, 
+		fileContent, 
+		userId, 
+		projectId, 
+		timestamp, 
+		timestamp)
+
 	if err != nil {
 		message := fmt.Sprintf("files.go::upload - Error uploading file: %v", err)
 		log.Default().Println(message)

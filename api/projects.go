@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 )
 
 type ProjectData struct {
@@ -48,7 +49,8 @@ func (pm *ProjectManager) createProject(pd ProjectData) error {
 		return err
 	}
 
-	_, err = pm.db.Exec(createProjectQuery, pd.Name, jsonDirectories, userId)
+	timestamp := time.Now().Unix()
+	_, err = pm.db.Exec(createProjectQuery, pd.Name, jsonDirectories, userId, timestamp, timestamp)
 	if err != nil {
 		message := fmt.Sprintf("projects.go::createProject - Error creating project: %v", err)
 		log.Default().Println(message)
