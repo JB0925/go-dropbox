@@ -14,3 +14,4 @@ const getProjectDirectoriesQuery = `SELECT directories FROM projects WHERE id = 
 const getFileQuery = `SELECT data, user_id FROM files WHERE name = $1 AND project_name = $2`
 const updateProjectDirectoryQuery = `UPDATE projects SET directories = $1, mtime = $3 WHERE id = $2`
 const viewProjectQuery = `SELECT directories FROM projects WHERE project_name = $1 and user_id = $2`
+const deleteFileQuery = `DELETE FROM files WHERE name = $1 AND project_name = $2 AND user_id = $3 AND project_id = $4 AND path = $5`

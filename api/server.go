@@ -53,6 +53,7 @@ func NewServer() *http.Server {
 	mux.HandleFunc("/projects/view", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(viewProject))))
 	mux.HandleFunc("/files/upload", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(uploadFile))))
 	mux.HandleFunc("/files/download", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(downloadFile))))
+	mux.HandleFunc("/files/delete", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(deleteFile))))
 
 	return &http.Server{
 		Handler: mux,
@@ -280,4 +281,30 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", strconv.Itoa(len(file)))
 	w.Write(file)	
+}
+
+func deleteFile(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	var d map[string]string
+
+	err := json.NewDecoder(r.Body).Decode(&d)
+	if err != nil {
+		message := fmt.Sprintf("files.go::delete - Error decoding request body: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Invalid request body", getErrorCode(err))
+		return
+	}
+
+	log.Default().Println("server.go::deleteFile - Got data for delete request. Data: ", d)
+
+	username := r.Header.Get("X-GO-DROPBOX-USER")
+	err = fileManager.deleteFile(d["project_name"], d["name"], d["path"], username)
+	if err != nil {
+		message := fmt.Sprintf("files.go::delete - Error deleting file: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error deleting file", getErrorCode(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
