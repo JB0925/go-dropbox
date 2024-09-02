@@ -35,3 +35,8 @@ curl -kv "http://localhost:8080/files/download?name=YESLogo2.png&project_name=fo
 ```
 curl -kv "http://localhost:8080/projects/view?project_name=foo" -H 'content-type: application/json' -H 'Authorization: ' | jq -r '.project' | jq
 ```
+
+## Delete a File
+```
+curl -kv http://localhost:8080/files/delete -H 'Authorization: ' -d '{"name": "login.go", "path": "/root/foo/baz", "project_name": "foo"}'
+```
