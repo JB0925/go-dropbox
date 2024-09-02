@@ -11,6 +11,12 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
+type JwtClaims struct {
+	Username string
+	UserId   int
+	jwt.StandardClaims
+}
+
 func isInvalidData(sd SignupData) bool {
 	return sd.Username == "" || sd.Password == "" || len(sd.Username) < 4 || len(sd.Password) < 8
 }
@@ -29,11 +35,14 @@ func newDb(dbUrl string) *sql.DB {
 	return db
 }
 
-func signJwt(username string) (string, error) {
-	claims := &jwt.StandardClaims{
-        ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-        Issuer:    username,
-    }
+func signJwt(username string, userId int) (string, error) {
+	claims := &JwtClaims{
+		Username: username,
+		UserId:   userId,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+		},
+	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
@@ -68,7 +77,8 @@ func verifyToken(tk string) (bool, string) {
 
     if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		log.Default().Printf("Token is valid until %s for user %v\n", claims["exp"], claims["iss"])
-        return true, claims["iss"].(string)
+		log.Default().Println("CLAIMS", claims)
+        return true, claims["Username"].(string)
     }
     
 	log.Default().Println("Token is invalid")
@@ -87,6 +97,7 @@ func checkAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		r.Header.Set("X-GO-DROPBOX-USER", username)
+		r.Header.Set("X-GO-DROPBOX-USER-ID", username)
 		next.ServeHTTP(w, r)
 	}
 }

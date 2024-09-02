@@ -36,7 +36,7 @@ func (lm *LoginManager) login(sd SignupData, doesUserExist func(string) bool) (s
 	    return "", ErrUserDoesNotExist	
 	}
 
-	hashedPassword, err := lm.getPassword(sd.Username)
+	userId, hashedPassword, err := lm.getPassword(sd.Username)
 	if err != nil {
 		return "", err
 	}
@@ -46,7 +46,7 @@ func (lm *LoginManager) login(sd SignupData, doesUserExist func(string) bool) (s
 		return "", ErrWrongPassword
 	}
 
-	token, err := signJwt(sd.Username)
+	token, err := signJwt(sd.Username, userId)
 	if err != nil {
 		return "", err
 	}
@@ -56,14 +56,15 @@ func (lm *LoginManager) login(sd SignupData, doesUserExist func(string) bool) (s
 	return token, nil
 }
 
-func (lm *LoginManager) getPassword(username string) (string, error) {
+func (lm *LoginManager) getPassword(username string) (int, string, error) {
+	var userId int
 	var password string
-	err := lm.db.QueryRow(getPasswordQuery, username).Scan(&password)
+	err := lm.db.QueryRow(getPasswordQuery, username).Scan(&userId, &password)
 	if err != nil {
 		message := fmt.Sprintf("login.go::getPassword - Error querying database: %v", err)
 		log.Default().Println(message)
-		return "", err
+		return 0, "", err
 	}
 
-	return password, nil
+	return userId, password, nil
 }

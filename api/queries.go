@@ -1,8 +1,8 @@
 package api
 
 const checkUserExistsQuery = `SELECT * FROM users WHERE username = $1`
-const createNewUserQuery = `INSERT INTO users (username, password) VALUES ($1, $2)`
-const getPasswordQuery = `SELECT password FROM users WHERE username = $1`
+const createNewUserQuery = `INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id`
+const getPasswordQuery = `SELECT id, password FROM users WHERE username = $1`
 const createProjectQuery = `INSERT INTO projects (project_name, directories, user_id, created_at, mtime) VALUES ($1, $2, $3, $4, $5)`
 const getUserQuery = `SELECT id FROM users WHERE username = $1`
 const checkProjectExistsQuery = `SELECT id FROM projects WHERE project_name = $1`

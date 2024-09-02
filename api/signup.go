@@ -37,12 +37,13 @@ func (sm *SignupManager) signup(sd SignupData) (string, error) {
 		return "", err
 	}
 
-	if err = sm.createNewUser(sd.Username, hashedPassword); err != nil {
+	userId, err := sm.createNewUser(sd.Username, hashedPassword)
+	if err != nil || userId == 0 {
 		// logging occurs in the createNewUser function
 		return "", errors.New("Error creating new user")
 	}
 
-	token, err := signJwt(sd.Username)
+	token, err := signJwt(sd.Username, userId)
 	if err != nil {
 		// logging occurs in the signJwt function
 		return "", err
@@ -86,15 +87,16 @@ func (sm *SignupManager) hashPassword(password string) (string, error) {
 	return string(hashedPassword), nil
 }
 
-func (sm *SignupManager) createNewUser(username string, password string) error {
+func (sm *SignupManager) createNewUser(username string, password string) (int, error) {
 	// This function would create a new user in the database
 	// with the given username and hashed password.
-	_, err := sm.db.Exec(createNewUserQuery, username, password)
+	var userId int
+	err := sm.db.QueryRow(createNewUserQuery, username, password).Scan(&userId)
 	if err != nil {
 		log.Default().Println("signup.go::createNewUser - Error creating new user: ", err)
-		return errors.New("Error creating new user")
+		return 0, errors.New("Error creating new user")
 	}
 
 	log.Default().Println("signup.go::createNewUser - New user created successfully")
-	return nil
+	return userId, nil
 }
