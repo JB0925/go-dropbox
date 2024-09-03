@@ -46,7 +46,7 @@ func (lm *LoginManager) login(sd SignupData, doesUserExist func(string) bool) (s
 		return "", ErrWrongPassword
 	}
 
-	token, err := signJwt(sd.Username, userId)
+	token, err := signJwt(sd.Username, string(userId))
 	if err != nil {
 		return "", err
 	}

@@ -43,7 +43,7 @@ func (sm *SignupManager) signup(sd SignupData) (string, error) {
 		return "", errors.New("Error creating new user")
 	}
 
-	token, err := signJwt(sd.Username, userId)
+	token, err := signJwt(sd.Username, string(userId))
 	if err != nil {
 		// logging occurs in the signJwt function
 		return "", err

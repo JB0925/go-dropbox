@@ -31,12 +31,7 @@ func NewProjectManager(dbUrl string) *ProjectManager {
 	return &ProjectManager{db: db}
 }
 
-func (pm *ProjectManager) createProject(pd ProjectData) error {
-	userId, err := pm.getUserId(pd.Username)
-	if err != nil || userId == 0 {
-		return err
-	}
-
+func (pm *ProjectManager) createProject(pd ProjectData, userId int) error {
 	if projectExists := pm.doesProjectExist(pd.Name); projectExists {
 		log.Default().Println("Project already exists")
 		return ErrProjectAlreadyExists
@@ -85,15 +80,10 @@ func (pm *ProjectManager) doesProjectExist(name string) bool {
 	return rows.Next()
 }
 
-func (pm *ProjectManager) viewProject(projectName, userName string) ([]byte, error) {
-	userId, err := pm.getUserId(userName)
-	if err != nil || userId == 0 {
-		return nil, err
-	}
-
+func (pm *ProjectManager) viewProject(projectName, userName string, userId int) ([]byte, error) {
 	var projectDirectories []byte
 
-	err = pm.db.QueryRow(viewProjectQuery, projectName, userId).Scan(&projectDirectories)
+	err := pm.db.QueryRow(viewProjectQuery, projectName, userId).Scan(&projectDirectories)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrProjectDoesNotExist

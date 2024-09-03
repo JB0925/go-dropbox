@@ -118,8 +118,8 @@ func signupUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"token": token})
 }
 
@@ -143,8 +143,9 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"token": token})
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"token": token})
 }
 
 func createProject(w http.ResponseWriter, r *http.Request) {
@@ -159,10 +160,19 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = projectManager.createProject(pd); err != nil {
+	userId, err := getAndConvertUserId(r) // get the user id from the request X-GO-DROPBOX-USER-ID header
+	if err != nil {
+		message := fmt.Sprintf("projects.go::createProject - Error converting userId to int: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error creating project", getErrorCode(err))
+		return
+	}
+
+	if err = projectManager.createProject(pd, userId); err != nil {
 		message := fmt.Sprintf("projects.go::createProject - Error creating project: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error creating project", getErrorCode(err))
+		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
@@ -178,8 +188,15 @@ func viewProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userName := r.Header.Get("X-GO-DROPBOX-USER")
-	project, err := projectManager.viewProject(projectName, userName)
+	userId, err := getAndConvertUserId(r) // get the user id from the request X-GO-DROPBOX-USER-ID header
+	if err != nil {
+		message := fmt.Sprintf("projects.go::viewProject - Error converting userId to int: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error viewing project", getErrorCode(err))
+		return
+	}
 
+	project, err := projectManager.viewProject(projectName, userName, userId)
 	if err != nil {
 		message := fmt.Sprintf("projects.go::viewProject - Error viewing project: %v", err)
 		log.Default().Println(message)
@@ -187,9 +204,9 @@ func viewProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{"project": string(project)})
-	w.Header().Set("Content-Type", "application/json")
 }
 
 func uploadFile(w http.ResponseWriter, r *http.Request) {
@@ -202,24 +219,22 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
     }
 
 	userName := r.Header.Get("X-GO-DROPBOX-USER")
-	log.Default().Printf("files.go::upload - User %s is uploading a file\n", userName)
+	log.Default().Printf("server.go::uploadFile - User %s is uploading a file\n", userName)
 
 	path := r.FormValue("path")
 	name := r.FormValue("name")
 	projectName := r.FormValue("project_name")
 
 	if userName == "" || projectName == "" || name == "" || path == "" {
-		message := fmt.Sprintf("files.go::upload - Missing required fields: %s, %s, %s, %s", userName, projectName, name, path)
+		message := fmt.Sprintf("server.go::uploadFile - Missing required fields: %s, %s, %s, %s", userName, projectName, name, path)
 		log.Default().Println(message)
 		http.Error(w, "Missing required fields", getErrorCode(ErrMissingRequiredFields))
 		return
 	}
 
-	w.Header().Set("Authorization", "Success")
-
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		message := fmt.Sprintf("files.go::upload - Error getting file: %v", err)
+		message := fmt.Sprintf("server.go::uploadFile - Error getting file: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error getting file", getErrorCode(err))
 		return
@@ -229,7 +244,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 
 	fc, err := io.ReadAll(file)
 	if err != nil {
-		message := fmt.Sprintf("files.go::upload - Error reading file: %v", err)
+		message := fmt.Sprintf("server.go::uploadFile - Error reading file: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error reading file", getErrorCode(err))
 		return
@@ -244,7 +259,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = fileManager.upload(fd, userName, fc); err != nil {
-		message := fmt.Sprintf("files.go::upload - Error uploading file: %v", err)
+		message := fmt.Sprintf("server.go::uploadFile - Error uploading file: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error uploading file", getErrorCode(err))
 		return
@@ -276,10 +291,10 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", strconv.Itoa(len(file)))
+	w.WriteHeader(http.StatusOK)
 	w.Write(file)	
 }
 
