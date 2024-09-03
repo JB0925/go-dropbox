@@ -63,7 +63,7 @@ func NewServer() *http.Server {
 
 func StartServer(s *http.Server) error {
 	// Try to start the server and run it in a goroutine so that multiple requests can be handled concurrently
-	go rateLimiter.Refresh()  // Start the rate limiter
+	go rateLimiter.Refresh()  // Start the rate limiter refresh in a goroutine
 
 	var e error
 	go func() {
@@ -90,21 +90,21 @@ func signupUser(w http.ResponseWriter, r *http.Request) {
 	var sd SignupData
 	err := json.NewDecoder(r.Body).Decode(&sd)
 	if err != nil {
-		message := fmt.Sprintf("signup.go::signup - Error decoding request body: %v", err)
+		message := fmt.Sprintf("server.go::signupUser - Error decoding request body: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	if isInvalidData(sd) {
-		message := fmt.Sprintf("signup.go::signup - Invalid data - Username: %s, Password: %s", sd.Username, sd.Password)
+		message := fmt.Sprintf("server.go::signupUser - Invalid data - Username: %s, Password: %s", sd.Username, sd.Password)
 		log.Default().Println(message)
 		http.Error(w, "Invalid data", http.StatusBadRequest)
 		return
 	}
 
 	if signupManager.doesUserExist(sd.Username) {
-		message := fmt.Sprintf("signup.go::signup - User with username %s already exists", sd.Username)
+		message := fmt.Sprintf("server.go::signupUser - User with username %s already exists", sd.Username)
 		log.Default().Println(message)
 		http.Error(w, "User already exists", http.StatusConflict)
 		return
@@ -112,7 +112,7 @@ func signupUser(w http.ResponseWriter, r *http.Request) {
 
 	token, err := signupManager.signup(sd)
 	if err != nil {
-		message := fmt.Sprintf("signup.go::signup - Error signing up: %v", err)
+		message := fmt.Sprintf("server.go::signupUser - Error signing up: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error signing up", getErrorCode(err))
 		return
@@ -129,7 +129,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	var sd SignupData
 	err := json.NewDecoder(r.Body).Decode(&sd)
 	if err != nil {
-		message := fmt.Sprintf("login.go::login - Error decoding request body: %v", err)
+		message := fmt.Sprintf("server.go::loginUser - Error decoding request body: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Invalid request body", getErrorCode(err))
 		return
@@ -137,7 +137,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 
 	token, err := loginManager.login(sd, signupManager.doesUserExist)
 	if err != nil {
-		message := fmt.Sprintf("login.go::login - Error logging in: %v", err)
+		message := fmt.Sprintf("server.go::loginUser - Error logging in: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error logging in", getErrorCode(err))
 		return
@@ -154,7 +154,7 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 	var pd ProjectData
 	err := json.NewDecoder(r.Body).Decode(&pd)
 	if err != nil {
-		message := fmt.Sprintf("projects.go::createProject - Error decoding request body: %v", err)
+		message := fmt.Sprintf("server.go::createProject - Error decoding request body: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -162,14 +162,14 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 
 	userId, err := getAndConvertUserId(r) // get the user id from the request X-GO-DROPBOX-USER-ID header
 	if err != nil {
-		message := fmt.Sprintf("projects.go::createProject - Error converting userId to int: %v", err)
+		message := fmt.Sprintf("server.go::createProject - Error converting userId to int: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error creating project", getErrorCode(err))
 		return
 	}
 
 	if err = projectManager.createProject(pd, userId); err != nil {
-		message := fmt.Sprintf("projects.go::createProject - Error creating project: %v", err)
+		message := fmt.Sprintf("server.go::createProject - Error creating project: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error creating project", getErrorCode(err))
 		return
@@ -181,7 +181,7 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 func viewProject(w http.ResponseWriter, r *http.Request) {
 	projectName := r.URL.Query().Get("project_name")
 	if projectName == "" {
-		message := fmt.Sprintf("projects.go::viewProject - Missing required field: projectName = %s", projectName)
+		message := fmt.Sprintf("server.go::viewProject - Missing required field: projectName = %s", projectName)
 		log.Default().Println(message)
 		http.Error(w, "Missing required field", getErrorCode(ErrMissingRequiredFields))
 		return
@@ -190,7 +190,7 @@ func viewProject(w http.ResponseWriter, r *http.Request) {
 	userName := r.Header.Get("X-GO-DROPBOX-USER")
 	userId, err := getAndConvertUserId(r) // get the user id from the request X-GO-DROPBOX-USER-ID header
 	if err != nil {
-		message := fmt.Sprintf("projects.go::viewProject - Error converting userId to int: %v", err)
+		message := fmt.Sprintf("server.go::viewProject - Error converting userId to int: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error viewing project", getErrorCode(err))
 		return
@@ -198,7 +198,7 @@ func viewProject(w http.ResponseWriter, r *http.Request) {
 
 	project, err := projectManager.viewProject(projectName, userName, userId)
 	if err != nil {
-		message := fmt.Sprintf("projects.go::viewProject - Error viewing project: %v", err)
+		message := fmt.Sprintf("server.go::viewProject - Error viewing project: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error viewing project", getErrorCode(err))
 		return
@@ -273,19 +273,19 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 	projectName := r.URL.Query().Get("project_name")
 
 	if fileName == "" || projectName == "" {
-		message := fmt.Sprintf("files.go::getFile - Missing required fields: fileName =  %s, projectName = %s", fileName, projectName)
+		message := fmt.Sprintf("server.go::downloadFile - Missing required fields: fileName =  %s, projectName = %s", fileName, projectName)
 		log.Default().Println(message)
 		http.Error(w, "Missing required fields", getErrorCode(ErrMissingRequiredFields))
 		return
 	}
 
-	message := fmt.Sprintf("files.go::getFile - Getting file %s from project %s", fileName, projectName)
+	message := fmt.Sprintf("server.go::downloadFile - Getting file %s from project %s", fileName, projectName)
 	log.Default().Println(message)
 
 	userName := r.Header.Get("X-GO-DROPBOX-USER")
 	file, err := fileManager.download(projectName, fileName, userName)
 	if err != nil {
-		message := fmt.Sprintf("files.go::getFile - Error getting file: %v", err)
+		message := fmt.Sprintf("server.go::downloadFile - Error getting file: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error getting file", getErrorCode(err))
 		return
@@ -304,7 +304,7 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&d)
 	if err != nil {
-		message := fmt.Sprintf("files.go::delete - Error decoding request body: %v", err)
+		message := fmt.Sprintf("server.go::deleteFile - Error decoding request body: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Invalid request body", getErrorCode(err))
 		return
@@ -315,7 +315,7 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 	username := r.Header.Get("X-GO-DROPBOX-USER")
 	err = fileManager.deleteFile(d["project_name"], d["name"], d["path"], username)
 	if err != nil {
-		message := fmt.Sprintf("files.go::delete - Error deleting file: %v", err)
+		message := fmt.Sprintf("server.go::deleteFile - Error deleting file: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error deleting file", getErrorCode(err))
 		return
