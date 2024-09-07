@@ -19,6 +19,14 @@ type ProjectManager struct {
 	db *sql.DB
 }
 
+var (
+	defaultDirectories = map[string]interface{}{
+		"root": map[string]interface{}{
+			"files": []interface{}{},
+		},
+	}
+)
+
 func (pd ProjectData) String() string {
 	return fmt.Sprintf("username: %s, name: %s, directories: %v, files: %v", pd.Username, pd.Name, pd.Directories, pd.Files)
 
@@ -35,6 +43,11 @@ func (pm *ProjectManager) createProject(pd ProjectData, userId int) error {
 	if projectExists := pm.doesProjectExist(pd.Name, userId); projectExists {
 		log.Default().Println("Project already exists")
 		return ErrProjectAlreadyExists
+	}
+
+	// Handle the case where the user does not provide any directories
+	if pd.Directories == nil {
+		pd.Directories = defaultDirectories
 	}
 
 	jsonDirectories, err := json.Marshal(pd.Directories)

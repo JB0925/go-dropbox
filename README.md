@@ -21,6 +21,7 @@ curl -kv http://localhost:8080/login -H 'content-type: application/json' -d '{"u
 # Note - each of the below requires a JWT acquired from signup or login. It is placed as the value in the "Authorization" header. Simply copy and paste yours into this example. Removing it here makes it so that you do not have to erase it if you copy the example.
 
 ## Create a Project
+Please note that the `"directories"` key in the payload below is optional - leaving it out will create a basic setup that looks like `{"root": {"files": []}}`.
 ```
 curl -kv "http://localhost:8080/projects/create" -H 'content-type: application/json' -H 'Authorization: ' -d '{"username": "jesseb", "name": "foo", "directories": {"root": {"files": [], "bar": {"files": []}}}}'
 ```
@@ -53,4 +54,9 @@ curl -kv "http://localhost:8080/projects/view?project_name=foo" -H 'content-type
 ## Delete a File
 ```
 curl -kv http://localhost:8080/files/delete -H 'Authorization: ' -d '{"name": "login.go", "path": "/root/foo/baz", "project_name": "foo"}'
+```
+
+## Update a File
+```
+ curl -kv http://localhost:8080/files/update -H 'content-type: multipart/form-data' -H "Authorization: $(< ~/go-dropbox-token-jesseb.txt)" -F 'name=login.go' -F 'project_name=hello' -F 'file=@login.go'
 ```
