@@ -51,6 +51,7 @@ func NewServer() *http.Server {
 	mux.HandleFunc("/login", rateLimiter.RateLimit(http.HandlerFunc(loginUser)))
 	mux.HandleFunc("/projects/create", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(createProject))))
 	mux.HandleFunc("/projects/view", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(viewProject))))
+	mux.HandleFunc("/projects/delete", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(deleteProject))))
 	mux.HandleFunc("/files/upload", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(uploadFile))))
 	mux.HandleFunc("/files/download", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(downloadFile))))
 	mux.HandleFunc("/files/delete", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(deleteFile))))
@@ -318,6 +319,34 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 		message := fmt.Sprintf("server.go::deleteFile - Error deleting file: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Error deleting file", getErrorCode(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func deleteProject(w http.ResponseWriter, r *http.Request) {
+	projectName := r.URL.Query().Get("project_name")
+	if projectName == "" {
+		message := fmt.Sprintf("server.go::deleteProject - Missing required field: projectName = %s", projectName)
+		log.Default().Println(message)
+		http.Error(w, "Missing required field", getErrorCode(ErrMissingRequiredFields))
+		return
+	}
+
+	userId, err := getAndConvertUserId(r) // get the user id from the request X-GO-DROPBOX-USER-ID header
+	if err != nil {
+		message := fmt.Sprintf("server.go::deleteProject - Error converting userId to int: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error deleting project", getErrorCode(err))
+		return
+	}
+
+	err = projectManager.deleteProject(projectName, userId)
+	if err != nil {
+		message := fmt.Sprintf("server.go::deleteProject - Error deleting project: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error deleting project", getErrorCode(err))
 		return
 	}
 

@@ -32,7 +32,7 @@ func NewProjectManager(dbUrl string) *ProjectManager {
 }
 
 func (pm *ProjectManager) createProject(pd ProjectData, userId int) error {
-	if projectExists := pm.doesProjectExist(pd.Name); projectExists {
+	if projectExists := pm.doesProjectExist(pd.Name, userId); projectExists {
 		log.Default().Println("Project already exists")
 		return ErrProjectAlreadyExists
 	}
@@ -69,8 +69,8 @@ func (pm *ProjectManager) getUserId(username string) (int, error) {
 	return userId, nil
 }
 
-func (pm *ProjectManager) doesProjectExist(name string) bool {
-	rows, err := pm.db.Query(checkProjectExistsQuery, name)
+func (pm *ProjectManager) doesProjectExist(name string, userId int) bool {
+	rows, err := pm.db.Query(checkProjectExistsQuery, name, userId)
 	if err != nil {
 		message := fmt.Sprintf("projects.go::doesProjectExist - Error querying database: %v", err)
 		log.Default().Println(message)
@@ -96,4 +96,24 @@ func (pm *ProjectManager) viewProject(projectName, userName string, userId int) 
 
 	log.Default().Printf("projects.go::viewProject - Project %s viewed successfully for user %s\n", projectName, userName)
 	return projectDirectories, nil
+}
+
+func (pm *ProjectManager) deleteProject(projectName string, userId int) error {
+	// It should be noted that when a project is deleted, all the files and directories
+	// associated with the project are also deleted.
+	if !pm.doesProjectExist(projectName, userId) {
+		log.Default().Println("Project does not exist")
+		return ErrProjectDoesNotExist
+	}
+
+	_, err := pm.db.Exec(deleteProjectQuery, projectName, userId)
+	if err != nil {
+		message := fmt.Sprintf("projects.go::deleteProject - Error deleting project: %v", err)
+		log.Default().Println(message)
+		return err
+	}
+
+	message := fmt.Sprintf("projects.go::deleteProject - Project %s deleted successfully", projectName)
+	log.Default().Println(message)
+	return nil
 }

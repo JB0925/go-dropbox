@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
 	_ "github.com/lib/pq"
@@ -46,7 +47,7 @@ func (lm *LoginManager) login(sd SignupData, doesUserExist func(string) bool) (s
 		return "", ErrWrongPassword
 	}
 
-	token, err := signJwt(sd.Username, string(userId))
+	token, err := signJwt(sd.Username, strconv.Itoa(userId))
 	if err != nil {
 		return "", err
 	}

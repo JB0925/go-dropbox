@@ -83,6 +83,8 @@ func verifyToken(tk string) (bool, string, string) {
 		var userId string
 		if userIdFloat, ok := claims["UserId"].(float64); ok {
 			userId = fmt.Sprintf("%.0f", userIdFloat)
+		} else if userIdString, ok := claims["UserId"].(string); ok {
+			userId = userIdString
 		} else {
 			log.Default().Println("Error parsing UserId from claims")
 			return false, "", ""

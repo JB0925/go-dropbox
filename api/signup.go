@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -43,7 +44,7 @@ func (sm *SignupManager) signup(sd SignupData) (string, error) {
 		return "", errors.New("Error creating new user")
 	}
 
-	token, err := signJwt(sd.Username, string(userId))
+	token, err := signJwt(sd.Username, strconv.Itoa(userId))
 	if err != nil {
 		// logging occurs in the signJwt function
 		return "", err
@@ -98,5 +99,6 @@ func (sm *SignupManager) createNewUser(username string, password string) (int, e
 	}
 
 	log.Default().Println("signup.go::createNewUser - New user created successfully")
+	log.Default().Printf("signup.go::createNewUser - User %s has userId %d\n", username, userId)
 	return userId, nil
 }

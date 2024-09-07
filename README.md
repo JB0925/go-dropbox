@@ -18,6 +18,13 @@ curl -kv http://localhost:8080/login -H 'content-type: application/json' -d '{"u
 curl -kv "http://localhost:8080/projects/create" -H 'content-type: application/json' -H 'Authorization: ' -d '{"username": "jesseb", "name": "foo", "directories": {"root": {"files": [], "bar": {"files": []}}}}'
 ```
 
+# Note - Deleting a project also deletes all of the files associated with it.
+
+## Delete a Project
+```
+curl -kv http://localhost:8080/projects/delete?project_name=foor -H 'content-type: application/json' -H 'Authorization: '
+```
+
 ## Create a File
 - must belong to a project
 - content-type is multipart/form-data
