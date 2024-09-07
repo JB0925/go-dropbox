@@ -120,6 +120,7 @@ func signupUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	writeTokenToFile(token, sd.Username) // write the token to a file for later use - best effort
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"token": token})
@@ -145,6 +146,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	writeTokenToFile(token, sd.Username) // write the token to a file for later use - best effort
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"token": token})

@@ -1,5 +1,12 @@
 # Sample Queries
 
+# Note - Handling Auth
+When you login or signup, go-dropbox will write your JWT to a file in your `$HOME` directory. Instead of copy/pasting the JWT every time you call the API, you can do this:
+```
+curl -kv "http://localhost:8080/projects/view?project_name=foo" -H 'content-type: application/json' -H "Authorization: $(< ~/go-dropbox-token-jesseb.txt)" | jq -r '.project' | jq
+```
+Note the use of `-H "Authorization: $(< ~/go-dropbox-token-jesseb.txt)"`, which is saying to read the token from a file. Also note the use of double quotes here.
+
 ## Sign Up - returns a JWT
 ```
 curl -kv http://localhost:8080/signup -H 'content-type: application/json' -d '{"username": "jesseb", "password": "foobar"}'

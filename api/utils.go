@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -145,4 +146,14 @@ func getAndConvertUserId(r *http.Request) (int, error)  {
 	}
 
 	return id, nil
+}
+
+func writeTokenToFile(token, username string) {
+	homeDir := os.Getenv("HOME")
+	tokenPath := fmt.Sprintf("%s/go-dropbox-token-%s.txt", homeDir, username)
+	if err := os.WriteFile(tokenPath, []byte(token), 0644); err != nil {
+		// This is not an error that should break the login flow.
+		message := fmt.Sprintf("server.go::loginUser - Error writing token to file: %v", err)
+		log.Default().Println(message)
+	}
 }
