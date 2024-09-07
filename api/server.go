@@ -53,6 +53,7 @@ func NewServer() *http.Server {
 	mux.HandleFunc("/projects/view", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(viewProject))))
 	mux.HandleFunc("/projects/delete", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(deleteProject))))
 	mux.HandleFunc("/files/upload", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(uploadFile))))
+	mux.HandleFunc("/files/update", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(updateFile))))
 	mux.HandleFunc("/files/download", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(downloadFile))))
 	mux.HandleFunc("/files/delete", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(deleteFile))))
 
@@ -299,6 +300,64 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 	w.Write(file)	
 }
 
+func updateFile(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	err := r.ParseMultipartForm(10 << 20) // 10MB
+    if err != nil {
+        http.Error(w, "Unable to parse form", http.StatusBadRequest)
+        return
+    }
+
+	userId, err := getAndConvertUserId(r) // get the user id from the request X-GO-DROPBOX-USER-ID header
+	log.Default().Printf("server.go::uploadFile - User %s is updating a file\n", userId)
+
+	name := r.FormValue("name")
+	projectName := r.FormValue("project_name")
+
+	if userId == 0 || projectName == "" || name == "" {
+		message := fmt.Sprintf("server.go::uploadFile - Missing required fields: %s, %s, %s, %s", userId, projectName, name)
+		log.Default().Println(message)
+		http.Error(w, "Missing required fields", getErrorCode(ErrMissingRequiredFields))
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		message := fmt.Sprintf("server.go::uploadFile - Error getting file: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error getting file", getErrorCode(err))
+		return
+	}
+
+	defer file.Close()
+
+	fc, err := io.ReadAll(file)
+	if err != nil {
+		message := fmt.Sprintf("server.go::uploadFile - Error reading file: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error reading file", getErrorCode(err))
+		return
+	}
+
+	log.Default().Printf("Got file %s of content length %d\n", name, len(fc))
+
+	fd := FileData{
+		Name: name,
+		ProjectName: projectName,
+	}
+
+
+	if err = fileManager.update(fd, fc, userId); err != nil {
+		message := fmt.Sprintf("server.go::uploadFile - Error uploading file: %v", err)
+		log.Default().Println(message)
+		http.Error(w, "Error uploading file", getErrorCode(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func deleteFile(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var d map[string]string
@@ -326,6 +385,8 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteProject(w http.ResponseWriter, r *http.Request) {
+	// It is important to note that when a project is deleted, all the files and directories
+	// associated with the project are also deleted.
 	projectName := r.URL.Query().Get("project_name")
 	if projectName == "" {
 		message := fmt.Sprintf("server.go::deleteProject - Missing required field: projectName = %s", projectName)

@@ -472,3 +472,39 @@ func (fm *FileManager) removeFileFromDataStore(
 	log.Default().Println(fmt.Sprintf("files.go::delete - File %s deleted successfully", fileName))
 	return nil
 }
+
+func (fm *FileManager) update(
+	fd FileData, 
+	fileContent []byte, 
+	userId int) error {
+	// This function updates a file in the database
+	// and returns an error if the file does not exist or
+	// if there was an error updating the file.
+	projectId, _, err := fm.getProjectIdAndDirectories(fd.ProjectName)
+	if err != nil {
+		fmt.Sprintf("files.go::update - Error getting project id with project name %s. Error: %w", fd.ProjectName, err)
+		log.Default().Println()
+		return err
+	}
+
+	exists, err := fm.doesFileExist(projectId, userId, fd.Name)
+	if err != nil {
+		log.Default().Println("files.go::update - Error checking if file exists: ", err)
+		return err
+	}
+
+	if !exists {
+		log.Default().Println("files.go::update - File does not exist")
+		return ErrFileDoesNotExist
+	}
+
+	timestamp := time.Now().Unix()
+	_, err = fm.db.Query(updateFileQuery, fileContent, timestamp, fd.Name, projectId, userId)
+	if err != nil {
+		message := fmt.Sprintf("files.go::update - Error updating file: %v", err)
+		log.Default().Println(message)
+		return err
+	}
+
+	return nil
+}
