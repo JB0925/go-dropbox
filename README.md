@@ -1,4 +1,4 @@
-# Sample Queries - test
+# Sample Queries
 
 # Note - Handling Auth
 When you login or signup, go-dropbox will write your JWT to a file in your `$HOME` directory. Instead of copy/pasting the JWT every time you call the API, you can do this:
