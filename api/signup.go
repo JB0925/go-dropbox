@@ -41,7 +41,7 @@ func (sm *SignupManager) signup(sd SignupData) (string, error) {
 	userId, err := sm.createNewUser(sd.Username, hashedPassword)
 	if err != nil || userId == 0 {
 		// logging occurs in the createNewUser function
-		return "", errors.New("Error creating new user")
+		return "", errors.New("error creating new user")
 	}
 
 	token, err := signJwt(sd.Username, strconv.Itoa(userId))
@@ -95,7 +95,7 @@ func (sm *SignupManager) createNewUser(username string, password string) (int, e
 	err := sm.db.QueryRow(createNewUserQuery, username, password).Scan(&userId)
 	if err != nil {
 		log.Default().Println("signup.go::createNewUser - Error creating new user: ", err)
-		return 0, errors.New("Error creating new user")
+		return 0, errors.New("error creating new user")
 	}
 
 	log.Default().Println("signup.go::createNewUser - New user created successfully")

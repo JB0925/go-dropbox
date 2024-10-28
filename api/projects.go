@@ -70,6 +70,7 @@ func (pm *ProjectManager) createProject(pd ProjectData, userId int) error {
 	return nil
 }
 
+//lint:ignore U1000 Ignore unused function
 func (pm *ProjectManager) getUserId(username string) (int, error) {
 	var userId int
 	err := pm.db.QueryRow(getUserQuery, username).Scan(&userId)

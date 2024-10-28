@@ -33,7 +33,7 @@ curl -kv "http://localhost:8080/projects/create" -H 'content-type: application/j
 curl -kv http://localhost:8080/projects/delete?project_name=foor -H 'content-type: application/json' -H 'Authorization: '
 ```
 
-## Create a File
+## Upload a File
 - must belong to a project
 - content-type is multipart/form-data
 - can create a new filepath by passing in what you want the filepath to be

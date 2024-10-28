@@ -41,7 +41,7 @@ var (
 	signupManager *SignupManager
 	projectManager *ProjectManager
 	fileManager *FileManager
-	ErrProjectAlreadyExists = errors.New("Project already exists")
+	ErrProjectAlreadyExists = errors.New("project already exists")
 	rateLimiter = rate_limiter.NewRateLimiter(5, 30 * time.Second, 2)
 )
 
@@ -312,13 +312,18 @@ func updateFile(w http.ResponseWriter, r *http.Request) {
     }
 
 	userId, err := getAndConvertUserId(r) // get the user id from the request X-GO-DROPBOX-USER-ID header
-	log.Default().Printf("server.go::uploadFile - User %s is updating a file\n", userId)
+	if err != nil || userId == 0 {
+		http.Error(w, "User provided auth token did not contain user id", http.StatusBadRequest)
+	}
+
+	log.Default().Printf("server.go::uploadFile - User %d is updating a file\n", userId)
 
 	name := r.FormValue("name")
 	projectName := r.FormValue("project_name")
+	path := r.FormValue("path")
 
 	if userId == 0 || projectName == "" || name == "" {
-		message := fmt.Sprintf("server.go::uploadFile - Missing required fields: %s, %s, %s, %s", userId, projectName, name)
+		message := fmt.Sprintf("server.go::uploadFile - Missing required fields: %d, %s, %s, %s", userId, projectName, name, path)
 		log.Default().Println(message)
 		http.Error(w, "Missing required fields", getErrorCode(ErrMissingRequiredFields))
 		return

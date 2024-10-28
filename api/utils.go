@@ -142,7 +142,7 @@ func getAndConvertUserId(r *http.Request) (int, error)  {
 	userId := r.Header.Get("X-GO-DROPBOX-USER-ID")
 	id, err := strconv.Atoi(userId)
 	if err != nil {
-		return 0, fmt.Errorf("Error converting user id to int: %v", err)
+		return 0, fmt.Errorf("error converting user id to int: %v", err)
 	}
 
 	return id, nil

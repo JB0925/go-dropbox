@@ -1,6 +1,7 @@
 package api
 
 import (
+	// "crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -167,7 +168,7 @@ func (fm *FileManager) getUserId(username string) (int, error) {
 	var userId int
 	err := fm.db.QueryRow(getUserQuery, username).Scan(&userId)
 	if err != nil {
-		message := fmt.Sprintf("projects.go::getUserId - Error querying database: %v", err)
+		message := fmt.Sprintf("files.go::getUserId - Error querying database: %v", err)
 		log.Default().Println(message)
 		return 0, err
 	}
@@ -201,6 +202,7 @@ func (fm *FileManager) doesFileExist(project_id, user_id int, fileName string) (
 	return false, nil
 }
 
+//lint:ignore U1000 Ignore unused function in case of potential future use
 func (fm *FileManager) getDirectories(projectId int) ([]byte, error) {
 	// *** DEPRECATED ***
 	// Gets the directories map associated with the project. 
@@ -469,7 +471,7 @@ func (fm *FileManager) removeFileFromDataStore(
 		return err
 	}
 
-	log.Default().Println(fmt.Sprintf("files.go::delete - File %s deleted successfully", fileName))
+	log.Default().Printf("files.go::delete - File %s deleted successfully", fileName)
 	return nil
 }
 
@@ -482,8 +484,8 @@ func (fm *FileManager) update(
 	// if there was an error updating the file.
 	projectId, _, err := fm.getProjectIdAndDirectories(fd.ProjectName)
 	if err != nil {
-		fmt.Sprintf("files.go::update - Error getting project id with project name %s. Error: %w", fd.ProjectName, err)
-		log.Default().Println()
+		msg := fmt.Errorf("files.go::update - Error getting project id with project name %s. Error: %w", fd.ProjectName, err)
+		log.Default().Println(msg)
 		return err
 	}
 
@@ -508,3 +510,7 @@ func (fm *FileManager) update(
 
 	return nil
 }
+
+// func (fm *FileManager) createSharableLink(fileName string, userId int) (string, error) {
+
+// }
