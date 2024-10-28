@@ -540,7 +540,7 @@ func (fm *FileManager) storeFileHashForSharing(sd SharingData) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error creating hash of file content. Err: %w", err)
 	}
-	_, err = fm.db.Exec(createSharedFileQuery, hash, sd.UserId, sd.ProjectId, sd.Name)
+	_, err = fm.db.Exec(createSharedFileQuery, hash, sd.UserId, sd.ProjectId, sd.Name, sd.ProjectName)
 	if err != nil {
 		return "", fmt.Errorf("error storing hash for file sharing. Err: %w", err)
 	}
