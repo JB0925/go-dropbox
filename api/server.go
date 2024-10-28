@@ -56,6 +56,7 @@ func NewServer() *http.Server {
 	mux.HandleFunc("/files/update", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(updateFile))))
 	mux.HandleFunc("/files/download", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(downloadFile))))
 	mux.HandleFunc("/files/delete", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(deleteFile))))
+	mux.HandleFunc("/files/sharing", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(shareFile))))
 
 	return &http.Server{
 		Handler: mux,
@@ -419,4 +420,35 @@ func deleteProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func shareFile(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	sd := SharingData{}
+	if err := json.NewDecoder(r.Body).Decode(&sd); err != nil {
+		message := fmt.Errorf("cannot decode malformed request body. Err: %w", err)
+		log.Default().Println(message)
+		http.Error(w, "Error decoding request body.", http.StatusBadRequest)
+		return
+	}
+
+	userId, err := getAndConvertUserId(r)
+	if err != nil || userId == 0 {
+		log.Default().Printf("User id does not exist or is invalid. User ID: %d", userId)
+		http.Error(w, "Error getting user id from auth token.", http.StatusBadRequest)
+		return
+	}
+
+	sd.UserId = userId
+	hash, err := fileManager.storeFileHashForSharing(sd)
+	if err != nil {
+		log.Default().Println("error storing hash for sharing file. Err: %w", err)
+		http.Error(w, "Error storing hash for file sharing.", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"hash": hash})
 }

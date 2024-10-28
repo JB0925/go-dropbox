@@ -60,3 +60,12 @@ curl -kv http://localhost:8080/files/delete -H 'Authorization: ' -d '{"name": "l
 ```
  curl -kv http://localhost:8080/files/update -H 'content-type: multipart/form-data' -H "Authorization: $(< ~/go-dropbox-token-jesseb.txt)" -F 'name=login.go' -F 'project_name=hello' -F 'file=@login.go'
 ```
+
+## Sharing a File
+- YOU own the file and want to share it with someone else. Note that once the link is in the wild,
+anyone can access it, so share wisely!
+- Also, note that the hash is a checksum of the file's current content. If the file content changes, the
+hash is invalid and the **owner will have to reshare with the user.**
+```
+curl -kv http://localhost:8080/files/sharing -H 'content-type: application/json' -d '{"name": "main.go", "project_name": "foo", "project_id": 6}' -H 'Authorization: '
+```

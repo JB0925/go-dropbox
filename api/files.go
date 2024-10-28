@@ -1,7 +1,7 @@
 package api
 
 import (
-	// "crypto/sha256"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -14,6 +14,13 @@ type FileData struct {
 	Name string `json:"name"`
 	Path string `json:"path"`
 	ProjectName string `json:"project_name"`
+}
+
+type SharingData struct {
+	Name string `json:"name"`
+	ProjectName string `json:"project_name"`
+	UserId int `json:"user_id"`
+	ProjectId int `json:"project_id"`
 }
 
 type FileManager struct {
@@ -509,6 +516,36 @@ func (fm *FileManager) update(
 	}
 
 	return nil
+}
+
+func (fm *FileManager) createHashFromContent(fileContent []byte) (string, error) {
+	h := sha256.New()
+	if _, err := h.Write(fileContent); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+func (fm *FileManager) storeFileHashForSharing(sd SharingData) (string, error) {
+	var uid int
+	var fileData []byte
+	if err := fm.db.QueryRow(getFileQuery, sd.Name, sd.ProjectName).Scan(&fileData, &uid); err != nil {
+		return "", fmt.Errorf("error getting file. Err: %w", err)
+	}
+	if sd.UserId != uid {
+		return "", fmt.Errorf("error storing hash for shared file. User ids do not match")
+	}
+	hash, err := fm.createHashFromContent(fileData)
+	if err != nil {
+		return "", fmt.Errorf("error creating hash of file content. Err: %w", err)
+	}
+	_, err = fm.db.Exec(createSharedFileQuery, hash, sd.UserId, sd.ProjectId, sd.Name)
+	if err != nil {
+		return "", fmt.Errorf("error storing hash for file sharing. Err: %w", err)
+	}
+
+	return hash, nil
 }
 
 // func (fm *FileManager) createSharableLink(fileName string, userId int) (string, error) {
