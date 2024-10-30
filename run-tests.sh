@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Run the Go application
+echo "Starting Go application..."
+go run . 5000 &
+app_pid=$!  # Save the PID of the go process
+
+# Wait a moment to ensure the application starts
+sleep 1
+
+# Run tests with coverage
+echo "Running tests with coverage..."
+go test --cover ./...
+
+# Kill the running application
+echo "Killing the Go application..."
+kill -9 $app_pid
+
+# Ensure all processes named go-dropbox are terminated (optional)
+pkill -f go-dropbox
+
+echo "Script completed."

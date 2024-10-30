@@ -50,7 +50,11 @@ const (
 	sharerUserNameKey = "X-GO-DROPBOX-SHARER"
 )
 
-func NewServer() *http.Server {
+func NewServer(maxRequests int) *http.Server {
+	if maxRequests > 0 {
+		log.Default().Printf("Updating max requests for rate limiting purposes: %d", maxRequests)
+		rateLimiter.MaxRequests = maxRequests  // make this change for testing
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/signup", rateLimiter.RateLimit(http.HandlerFunc(signupUser)))
 	mux.HandleFunc("/login", rateLimiter.RateLimit(http.HandlerFunc(loginUser)))
