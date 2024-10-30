@@ -148,6 +148,8 @@ func getAndConvertUserId(r *http.Request) (int, error)  {
 	return id, nil
 }
 
+// This function is a convenience so that one does not have to keep chasing down their login token
+// 
 func writeTokenToFile(token, username string) {
 	homeDir := os.Getenv("HOME")
 	tokenPath := fmt.Sprintf("%s/go-dropbox-token-%s.txt", homeDir, username)
@@ -156,4 +158,22 @@ func writeTokenToFile(token, username string) {
 		message := fmt.Sprintf("server.go::loginUser - Error writing token to file: %v", err)
 		log.Default().Println(message)
 	}
+}
+
+// godotenv requires that the values returned via os.Getenv are strings
+// maxRequests should be an int, so we need to convert it. This function
+// tries to convert it and, if it cannot, it will panic. This is ok, because
+// this is initialization code.
+//
+// @param: maxRequests - string - represents the max number of requests per IP for rate limiting purposes
+// @return int - maxRequests cast to an int value
+func parseMaxRequests(maxRequests string) int {
+	log.Default().Printf("GOT %s FOR MAX REQUESTS", maxRequests)
+	mr, err := strconv.Atoi(maxRequests)
+	if err != nil {
+		log.Default().Printf("could not parse max requests. maxRequests = %s", maxRequests)
+		panic(err)
+	}
+
+	return mr
 }

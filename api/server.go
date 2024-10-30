@@ -29,6 +29,7 @@ func init() {
 	}
 
 	dbName = os.Getenv("DATABASE_URL")
+	maxRequests = os.Getenv("MAX_REQUESTS")
 	loginManager = NewLoginManager(dbName)
 	signupManager = NewSignupManager(dbName)
 	projectManager = NewProjectManager(dbName)
@@ -37,6 +38,7 @@ func init() {
 
 var (
 	dbName string
+	maxRequests string
 	loginManager *LoginManager
 	signupManager *SignupManager
 	projectManager *ProjectManager
@@ -50,10 +52,10 @@ const (
 	sharerUserNameKey = "X-GO-DROPBOX-SHARER"
 )
 
-func NewServer(maxRequests int) *http.Server {
-	if maxRequests > 0 {
-		log.Default().Printf("Updating max requests for rate limiting purposes: %d", maxRequests)
-		rateLimiter.MaxRequests = maxRequests  // make this change for testing
+func NewServer() *http.Server {
+	if maxRequests != "" {
+		log.Default().Printf("Updating max requests for rate limiting purposes: %s", maxRequests)
+		rateLimiter.MaxRequests = parseMaxRequests(maxRequests)  // make this change for testing
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/signup", rateLimiter.RateLimit(http.HandlerFunc(signupUser)))

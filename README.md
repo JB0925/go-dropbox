@@ -17,6 +17,14 @@ curl -kv http://localhost:8080/signup -H 'content-type: application/json' -d '{"
 curl -kv http://localhost:8080/login -H 'content-type: application/json' -d '{"username": "jesseb", "password": "foobar"}'
 ```
 
+## Helpful Tip Re: Auth Tokens in the CLI
+When you login to go-dropbox, it will write a JWT token to your home directory. This is the same token that is returned to you via /login. Instead of hunting down this token in your terminal, or copy and pasting from that file each time, you can do something like this:
+```
+curl -kv "http://localhost:8080/projects/view?project_name=foo" -H 'content-type: application/json' -H "Authorization: $(cat ~/go-dropbox-token-jesseb.txt)" | jq -r '.project' | jq
+```
+
+That will use shell expansion to substitute your actual JWT token into the space where `$(cat ~/go-dropbox-token-username.txt)` resides.
+
 
 # Note - each of the below requires a JWT acquired from signup or login. It is placed as the value in the "Authorization" header. Simply copy and paste yours into this example. Removing it here makes it so that you do not have to erase it if you copy the example.
 

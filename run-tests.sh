@@ -2,7 +2,7 @@
 
 # Run the Go application
 echo "Starting Go application..."
-go run . 5000 &
+export MAX_REQUESTS=5000; go run . 5000 &
 app_pid=$!  # Save the PID of the go process
 
 # Wait a moment to ensure the application starts
@@ -18,5 +18,6 @@ kill -9 $app_pid
 
 # Ensure all processes named go-dropbox are terminated (optional)
 pkill -f go-dropbox
+unset MAX_REQUESTS
 
 echo "Script completed."
