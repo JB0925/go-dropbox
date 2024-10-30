@@ -69,3 +69,17 @@ hash is invalid and the **owner will have to reshare with the user.**
 ```
 curl -kv http://localhost:8080/files/sharing -H 'content-type: application/json' -d '{"name": "main.go", "project_name": "foo", "project_id": 6}' -H 'Authorization: '
 ```
+
+## Getting a Shared File
+- Someone has shared a file with you and you have the hash of the file. You can use the following api call
+to download it:
+```
+curl -v http://localhost:8080/files/shared -H 'X-GO-DROPBOX-SHARED-HASH: 5ca07cfe530106ffa949c2ac793fcf240a98034d5b42eb3358968f5343745b55' -H 'X-GO-DROPBOX-SHARER: jesseb' -o ./myfile.png
+```
+
+- Note the two headers you need to add:
+1. `X-GO-DROPBOX-SHARER` - the username of the person who shared it with you.
+2. `X-GO-DROPBOX-SHARED-HASH` - the hash of the file content, given to you by the person who shared it.
+
+- Note that this endpoint requires no auth - if the user has the hash and the username of the person who
+created it, they will be able to download it.

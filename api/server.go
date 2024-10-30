@@ -45,6 +45,11 @@ var (
 	rateLimiter = rate_limiter.NewRateLimiter(5, 30 * time.Second, 2)
 )
 
+const (
+	hashHeaderKey = "X-GO-DROPBOX-SHARED-HASH"
+	sharerUserNameKey = "X-GO-DROPBOX-SHARER"
+)
+
 func NewServer() *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/signup", rateLimiter.RateLimit(http.HandlerFunc(signupUser)))
@@ -57,6 +62,7 @@ func NewServer() *http.Server {
 	mux.HandleFunc("/files/download", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(downloadFile))))
 	mux.HandleFunc("/files/delete", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(deleteFile))))
 	mux.HandleFunc("/files/sharing", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(shareFile))))
+	mux.HandleFunc("/files/shared", rateLimiter.RateLimit(http.HandlerFunc(getSharedFile)))
 
 	return &http.Server{
 		Handler: mux,
@@ -451,4 +457,33 @@ func shareFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"hash": hash})
+}
+
+func getSharedFile(w http.ResponseWriter, r *http.Request) {
+	contentHash := r.Header.Get(hashHeaderKey)
+	sharerUserName := r.Header.Get(sharerUserNameKey)
+
+	if contentHash == "" || sharerUserName == "" {
+		log.Default().Println("user did not provide either contentHash or sharerUserName for file sharing")
+		http.Error(w, "bad request - to share file please provide sharer username and content hash", http.StatusBadRequest)
+		return
+	}
+
+	fileName, fileData, err := fileManager.shareFile(contentHash, sharerUserName)
+	if err != nil {
+		if errors.Is(err, ErrFileDoesNotExist) {
+			http.Error(w, "Requested file not found.", http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, "An internal error occurred.", http.StatusInternalServerError)
+		return
+	}
+
+	
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Length", strconv.Itoa(len(fileData)))
+	w.WriteHeader(http.StatusOK)
+	w.Write(fileData)	
 }

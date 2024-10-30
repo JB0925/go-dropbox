@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -531,6 +532,9 @@ func (fm *FileManager) storeFileHashForSharing(sd SharingData) (string, error) {
 	var uid int
 	var fileData []byte
 	if err := fm.db.QueryRow(getFileQuery, sd.Name, sd.ProjectName).Scan(&fileData, &uid); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", ErrFileDoesNotExist
+		}
 		return "", fmt.Errorf("error getting file. Err: %w", err)
 	}
 	if sd.UserId != uid {
@@ -548,6 +552,23 @@ func (fm *FileManager) storeFileHashForSharing(sd SharingData) (string, error) {
 	return hash, nil
 }
 
-// func (fm *FileManager) createSharableLink(fileName string, userId int) (string, error) {
+func (fm *FileManager) shareFile(userGivenHash, userName string) (string, []byte, error) {
+	var projectName string
+	var fileName string
 
-// }
+	if err := fm.db.QueryRow(
+		getSharedFileDetailsQuery, userGivenHash,
+	).Scan(&fileName, &projectName); err != nil {
+		errMsg := fmt.Errorf("an error occurred when trying to find the given hash for sharing. Err: %w", err)
+		log.Default().Println(errMsg.Error())
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", []byte{}, ErrFileDoesNotExist
+		}
+		return "", []byte{}, fmt.Errorf("error getting shared file: %w", err)
+	}
+
+	// at this point, we've determined that this file exists as expected,
+	// so now we can call "download" to return it to the user.
+	fileData, err := fm.download(projectName, fileName, userName)
+	return fileName, fileData, err
+}

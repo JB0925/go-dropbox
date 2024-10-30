@@ -19,3 +19,4 @@ const viewProjectQuery = `SELECT directories FROM projects WHERE project_name = 
 const deleteFileQuery = `DELETE FROM files WHERE name = $1 AND project_name = $2 AND user_id = $3 AND project_id = $4 AND path = $5`
 const deleteProjectQuery = `DELETE FROM projects WHERE project_name = $1 AND user_id = $2`
 const createSharedFileQuery = `INSERT INTO shared (hash, user_id, project_id, file_name, project_name) VALUES ($1, $2, $3, $4, $5)`
+const getSharedFileDetailsQuery = `SELECT file_name, project_name FROM shared WHERE hash = $1`
