@@ -19,9 +19,12 @@ const (
 	baseUrl = "http://localhost:8080"
 	signupEndpoint = "/signup"
 	loginEndpoint = "/login"
+	createProjectEndpoint = "/projects/create"
 	defaultContentType = "application/json"
 	testUsername = "helloworld"
 	testPassword = "Testing123!"
+	contentTypeHeaderKey = "content-type"
+	authHeaderKey = "Authorization"
 )
 
 func startServer() {

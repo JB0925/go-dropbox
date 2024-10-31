@@ -168,7 +168,6 @@ func writeTokenToFile(token, username string) {
 // @param: maxRequests - string - represents the max number of requests per IP for rate limiting purposes
 // @return int - maxRequests cast to an int value
 func parseMaxRequests(maxRequests string) int {
-	log.Default().Printf("GOT %s FOR MAX REQUESTS", maxRequests)
 	mr, err := strconv.Atoi(maxRequests)
 	if err != nil {
 		log.Default().Printf("could not parse max requests. maxRequests = %s", maxRequests)

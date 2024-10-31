@@ -75,7 +75,7 @@ func (rl *RateLimiter) RateLimit(next http.HandlerFunc) http.HandlerFunc {
 		_, ok := rl.Requests[ip]
 		if !ok {
 			isNewIp = true
-			message := fmt.Sprintf("RateLimiter::Limit - IP %s not found in requests map - adding 5 requests", ip)
+			message := fmt.Sprintf("RateLimiter::Limit - IP %s not found in requests map - adding %d requests", ip, rl.MaxRequests)
 			log.Default().Println(message)
 			rl.Requests[ip] = rl.MaxRequests
 		}
