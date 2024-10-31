@@ -477,16 +477,12 @@ func getSharedFile(w http.ResponseWriter, r *http.Request) {
 
 	fileName, fileData, err := fileManager.shareFile(contentHash, sharerUserName)
 	if err != nil {
-		if errors.Is(err, ErrFileDoesNotExist) {
-			http.Error(w, "Requested file not found.", http.StatusNotFound)
-			return
-		}
-
-		http.Error(w, "An internal error occurred.", http.StatusInternalServerError)
-		return
+		message := fmt.Errorf("server.go::getSharedFile - Error when getting shared file: %w", err)
+		log.Default().Println(message)
+		http.Error(w, err.Error(), getErrorCode(err))
+		return	
 	}
 
-	
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", strconv.Itoa(len(fileData)))

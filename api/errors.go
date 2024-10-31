@@ -13,4 +13,5 @@ var (
 	ErrInvalidData = errors.New("invalid data")
 	ErrWrongPassword = errors.New("wrong password")
 	ErrInvalidPath = errors.New("invalid path")
+	ErrFileChanged = errors.New("file changed since it was shared")
 )

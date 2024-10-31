@@ -133,6 +133,8 @@ func getErrorCode(err error) int {
 		return http.StatusBadRequest
 	case errors.Is(err, ErrWrongPassword):
 		return http.StatusUnauthorized
+	case errors.Is(err, ErrFileChanged):
+		return http.StatusGone
 	default:
 		return http.StatusInternalServerError
 	}

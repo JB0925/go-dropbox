@@ -132,7 +132,7 @@ func (fm FileManager) download(projectName, fileName, userName string) ([]byte, 
 	return data, nil
 }
 
-func (fm FileManager) getProjectIdAndDirectories(projectName string) (int, []byte, error) {
+func (fm FileManager) getProjectIdAndDirectories(projectName string, userId int) (int, []byte, error) {
 	// This function gets the project id and directories from the database
 	// and returns an error if the project does not exist.
 	//
@@ -140,7 +140,7 @@ func (fm FileManager) getProjectIdAndDirectories(projectName string) (int, []byt
 	// @return: int - the project id
 	// @return: []byte - the directories of the project
 	// @return: error - An error if one exists
-	rows, err := fm.db.Query(getProjectIdQuery, projectName)
+	rows, err := fm.db.Query(getProjectIdQuery, projectName, userId)
 	if err != nil {
 		message := fmt.Sprintf("files.go::getProjectId - Error querying database: %v", err)
 		log.Default().Println(message)
@@ -310,12 +310,12 @@ func (fm *FileManager) getFileOwnerData(projectName, username string) (int, int,
 	// @return: int - the user id
 	// @return: []byte - the directories of the project
 	// @return: error - An error if one exists
-	projectId, directories, err := fm.getProjectIdAndDirectories(projectName)
+	userId, err := fm.getUserId(username)
 	if err != nil {
 		return 0, 0, []byte{}, err
 	}
 
-	userId, err := fm.getUserId(username)
+	projectId, directories, err := fm.getProjectIdAndDirectories(projectName, userId)
 	if err != nil {
 		return 0, 0, []byte{}, err
 	}
@@ -490,7 +490,7 @@ func (fm *FileManager) update(
 	// This function updates a file in the database
 	// and returns an error if the file does not exist or
 	// if there was an error updating the file.
-	projectId, _, err := fm.getProjectIdAndDirectories(fd.ProjectName)
+	projectId, _, err := fm.getProjectIdAndDirectories(fd.ProjectName, userId)
 	if err != nil {
 		msg := fmt.Errorf("files.go::update - Error getting project id with project name %s. Error: %w", fd.ProjectName, err)
 		log.Default().Println(msg)
@@ -570,5 +570,15 @@ func (fm *FileManager) shareFile(userGivenHash, userName string) (string, []byte
 	// at this point, we've determined that this file exists as expected,
 	// so now we can call "download" to return it to the user.
 	fileData, err := fm.download(projectName, fileName, userName)
+	if err != nil {
+		return "", []byte{}, fmt.Errorf("could not download file %s. Err: %w", fileName, err)
+	}
+	currentHash, err := fm.createHashFromContent(fileData)
+	if err != nil {
+		return "", []byte{}, fmt.Errorf("could not generate hash of file content. Err: %w", err)
+	}
+	if currentHash != userGivenHash {
+		return "", []byte{}, ErrFileChanged
+	}
 	return fileName, fileData, err
 }
