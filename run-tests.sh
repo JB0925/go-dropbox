@@ -2,7 +2,7 @@
 
 # Run the Go application
 echo "Starting Go application..."
-export MAX_REQUESTS=5000; go run . 5000 &
+export MAX_REQUESTS=5000; go run . &
 app_pid=$!  # Save the PID of the go process
 
 # Wait a moment to ensure the application starts
