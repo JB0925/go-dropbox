@@ -5,7 +5,7 @@ echo "Starting Go application..."
 if [[ $HOSTNAME != *.local ]]; then
     # for CI environment
     echo "SETTING DATABASE CONNECTION STRING"
-    export DATABASE_URL=postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres?sslmode=disable
+    export DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     echo $DATABASE_URL
 fi
 
