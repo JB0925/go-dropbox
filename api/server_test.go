@@ -53,7 +53,7 @@ func TestSignup(t *testing.T) {
 			want: http.StatusBadRequest,
 		},
 		{
-			name: "Test should return 401 when data is valid and user does not exist",
+			name: "Test should return 201 when data is valid and user does not exist",
 			username: testUsername,
 			password: testPassword,
 			expectToken: true,
