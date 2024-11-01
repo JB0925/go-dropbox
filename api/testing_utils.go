@@ -17,17 +17,17 @@ import (
 )
 
 const (
-	baseUrl = "http://localhost:8080"
-	signupEndpoint = "/signup"
-	loginEndpoint = "/login"
+	baseUrl               = "http://localhost:8080"
+	signupEndpoint        = "/signup"
+	loginEndpoint         = "/login"
 	createProjectEndpoint = "/projects/create"
-	viewProjectEndpoint = "/projects/view"
+	viewProjectEndpoint   = "/projects/view"
 	deleteProjectEndpoint = "/projects/delete"
-	defaultContentType = "application/json"
-	testUsername = "helloworld"
-	testPassword = "Testing123!"
-	contentTypeHeaderKey = "content-type"
-	authHeaderKey = "Authorization"
+	defaultContentType    = "application/json"
+	testUsername          = "helloworld"
+	testPassword          = "Testing123!"
+	contentTypeHeaderKey  = "content-type"
+	authHeaderKey         = "Authorization"
 )
 
 //lint:ignore U1000 Ignore unused function in case of potential future use
@@ -43,12 +43,12 @@ func startServer() {
 func killServer(pid string) {
 	cmd := exec.Command("sh", "-c", "kill -9 $(pgrep go-dropbox)")
 	if err := cmd.Run(); err != nil {
-        // Check if the error is an ExitError due to the process being killed - this is expected
-        exitErr, ok := err.(*exec.ExitError)
+		// Check if the error is an ExitError due to the process being killed - this is expected
+		exitErr, ok := err.(*exec.ExitError)
 		if ok && exitErr.Sys().(syscall.WaitStatus).ExitStatus() == 9 {
-            log.Default().Printf("Process %s killed successfully\n", pid)
+			log.Default().Printf("Process %s killed successfully\n", pid)
 			return
-        }
+		}
 
 		panic(fmt.Errorf("server did not stop"))
 	}
@@ -57,28 +57,28 @@ func killServer(pid string) {
 //lint:ignore U1000 Ignore unused function in case of potential future use
 func stopServerAfterTest(t *testing.T) {
 	var buf bytes.Buffer
-    var pid string
+	var pid string
 
-    // Retry until we find the process or reach a timeout
-    for retries := 5; retries > 0; retries-- {
-        cmd := exec.Command("pgrep", "go-dropbox")
-        cmd.Stdout = &buf
+	// Retry until we find the process or reach a timeout
+	for retries := 5; retries > 0; retries-- {
+		cmd := exec.Command("pgrep", "go-dropbox")
+		cmd.Stdout = &buf
 
-        if err := cmd.Run(); err == nil {
-            pid = buf.String()
-            break
-        }
+		if err := cmd.Run(); err == nil {
+			pid = buf.String()
+			break
+		}
 
-        // Clear the buffer and retry after a short delay
-        buf.Reset()
-        time.Sleep(500 * time.Millisecond)
-    }
+		// Clear the buffer and retry after a short delay
+		buf.Reset()
+		time.Sleep(500 * time.Millisecond)
+	}
 
-    if pid == "" {
-        t.Fatal("could not find server PID")
-    }
+	if pid == "" {
+		t.Fatal("could not find server PID")
+	}
 
-    log.Default().Printf("PID: %s", pid)
+	log.Default().Printf("PID: %s", pid)
 	killServer(pid)
 }
 
@@ -104,7 +104,7 @@ func unMarshalResponseBody(b []byte, t *testing.T) map[string]interface{} {
 
 func signupOrLoginTestUser(t *testing.T, username, password, mode string, expectToken bool) (string, int) {
 	c := http.Client{}
-	url := baseUrl+mode
+	url := baseUrl + mode
 	body := marshalRequestBody(map[string]string{
 		"username": username,
 		"password": password,
@@ -146,7 +146,7 @@ func makeRequest(
 	body io.Reader,
 ) *http.Response {
 	c := http.Client{}
-	url := baseUrl+path
+	url := baseUrl + path
 	contentType := defaultContentType
 	req, err := http.NewRequest(method, url, body)
 	assert.Nil(t, err)

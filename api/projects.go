@@ -9,10 +9,10 @@ import (
 )
 
 type ProjectData struct {
-	Username    string `json:"username"`
-	Name        string `json:"name"`
-	Directories	map[string]interface{} `json:"directories"`
-	Files	    []string `json:"files"`
+	Username    string                 `json:"username"`
+	Name        string                 `json:"name"`
+	Directories map[string]interface{} `json:"directories"`
+	Files       []string               `json:"files"`
 }
 
 type ProjectManager struct {

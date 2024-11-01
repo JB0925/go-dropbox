@@ -24,7 +24,7 @@ func init() {
 	if err != nil {
 		err = godotenv.Load("../.env")
 		if err != nil {
-			 log.Default().Println("Error loading .env file")
+			log.Default().Println("Error loading .env file")
 		}
 	}
 
@@ -37,25 +37,25 @@ func init() {
 }
 
 var (
-	dbName string
-	maxRequests string
-	loginManager *LoginManager
-	signupManager *SignupManager
-	projectManager *ProjectManager
-	fileManager *FileManager
+	dbName                  string
+	maxRequests             string
+	loginManager            *LoginManager
+	signupManager           *SignupManager
+	projectManager          *ProjectManager
+	fileManager             *FileManager
 	ErrProjectAlreadyExists = errors.New("project already exists")
-	rateLimiter = rate_limiter.NewRateLimiter(5, 30 * time.Second, 2)
+	rateLimiter             = rate_limiter.NewRateLimiter(5, 30*time.Second, 2)
 )
 
 const (
-	hashHeaderKey = "X-GO-DROPBOX-SHARED-HASH"
+	hashHeaderKey     = "X-GO-DROPBOX-SHARED-HASH"
 	sharerUserNameKey = "X-GO-DROPBOX-SHARER"
 )
 
 func NewServer() *http.Server {
 	if maxRequests != "" {
 		log.Default().Printf("Updating max requests for rate limiting purposes: %s", maxRequests)
-		rateLimiter.MaxRequests = parseMaxRequests(maxRequests)  // make this change for testing
+		rateLimiter.MaxRequests = parseMaxRequests(maxRequests) // make this change for testing
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/signup", rateLimiter.RateLimit(http.HandlerFunc(signupUser)))
@@ -72,13 +72,13 @@ func NewServer() *http.Server {
 
 	return &http.Server{
 		Handler: mux,
-		Addr:   ":8080",
+		Addr:    ":8080",
 	}
 }
 
 func StartServer(s *http.Server) error {
 	// Try to start the server and run it in a goroutine so that multiple requests can be handled concurrently
-	go rateLimiter.Refresh()  // Start the rate limiter refresh in a goroutine
+	go rateLimiter.Refresh() // Start the rate limiter refresh in a goroutine
 
 	var e error
 	go func() {
@@ -94,7 +94,7 @@ func StartServer(s *http.Server) error {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	<-sigChan  // the server will block here until a signal is received, which will prevent the main process from exiting
+	<-sigChan // the server will block here until a signal is received, which will prevent the main process from exiting
 	log.Default().Print("server::Start - Shutting down server")
 	return e
 }
@@ -230,10 +230,10 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	err := r.ParseMultipartForm(10 << 20) // 10MB
-    if err != nil {
-        http.Error(w, "Unable to parse form", http.StatusBadRequest)
-        return
-    }
+	if err != nil {
+		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+		return
+	}
 
 	userName := r.Header.Get("X-GO-DROPBOX-USER")
 	log.Default().Printf("server.go::uploadFile - User %s is uploading a file\n", userName)
@@ -270,8 +270,8 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	log.Default().Printf("Got file %s of content length %d\n", name, len(fc))
 
 	fd := FileData{
-		Name: name,
-		Path: path,
+		Name:        name,
+		Path:        path,
 		ProjectName: projectName,
 	}
 
@@ -312,17 +312,17 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", strconv.Itoa(len(file)))
 	w.WriteHeader(http.StatusOK)
-	w.Write(file)	
+	w.Write(file)
 }
 
 func updateFile(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	err := r.ParseMultipartForm(10 << 20) // 10MB
-    if err != nil {
-        http.Error(w, "Unable to parse form", http.StatusBadRequest)
-        return
-    }
+	if err != nil {
+		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+		return
+	}
 
 	userId, err := getAndConvertUserId(r) // get the user id from the request X-GO-DROPBOX-USER-ID header
 	if err != nil || userId == 0 {
@@ -363,10 +363,9 @@ func updateFile(w http.ResponseWriter, r *http.Request) {
 	log.Default().Printf("Got file %s of content length %d\n", name, len(fc))
 
 	fd := FileData{
-		Name: name,
+		Name:        name,
 		ProjectName: projectName,
 	}
-
 
 	if err = fileManager.update(fd, fc, userId); err != nil {
 		message := fmt.Sprintf("server.go::uploadFile - Error uploading file: %v", err)
@@ -480,12 +479,12 @@ func getSharedFile(w http.ResponseWriter, r *http.Request) {
 		message := fmt.Errorf("server.go::getSharedFile - Error when getting shared file: %w", err)
 		log.Default().Println(message)
 		http.Error(w, err.Error(), getErrorCode(err))
-		return	
+		return
 	}
 
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", strconv.Itoa(len(fileData)))
 	w.WriteHeader(http.StatusOK)
-	w.Write(fileData)	
+	w.Write(fileData)
 }

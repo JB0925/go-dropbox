@@ -16,55 +16,55 @@ func TestSignup(t *testing.T) {
 	defer clearTestUser(t, signupManager.db)
 
 	type args struct {
-		name string
-		username string
-		password string
+		name        string
+		username    string
+		password    string
 		expectToken bool
-		want int // the http status code
+		want        int // the http status code
 	}
 
 	tests := []args{
 		{
-			name: "Test should return 400 when username is too short",
-			username: "abc",
-			password: "defghijkl",
+			name:        "Test should return 400 when username is too short",
+			username:    "abc",
+			password:    "defghijkl",
 			expectToken: false,
-			want: http.StatusBadRequest,
+			want:        http.StatusBadRequest,
 		},
 		{
-			name: "Test should return 400 when password is too short",
-			username: "abcde",
-			password: "fgh",
+			name:        "Test should return 400 when password is too short",
+			username:    "abcde",
+			password:    "fgh",
 			expectToken: false,
-			want: http.StatusBadRequest,
+			want:        http.StatusBadRequest,
 		},
 		{
-			name: "Test should return 400 when username is empty",
-			username: "",
-			password: "abcdefghi",
+			name:        "Test should return 400 when username is empty",
+			username:    "",
+			password:    "abcdefghi",
 			expectToken: false,
-			want: http.StatusBadRequest,
+			want:        http.StatusBadRequest,
 		},
 		{
-			name: "Test should return 400 when password is empty",
-			username: "abcdefghi",
-			password: "",
+			name:        "Test should return 400 when password is empty",
+			username:    "abcdefghi",
+			password:    "",
 			expectToken: false,
-			want: http.StatusBadRequest,
+			want:        http.StatusBadRequest,
 		},
 		{
-			name: "Test should return 201 when data is valid and user does not exist",
-			username: testUsername,
-			password: testPassword,
+			name:        "Test should return 201 when data is valid and user does not exist",
+			username:    testUsername,
+			password:    testPassword,
 			expectToken: true,
-			want: http.StatusCreated,
+			want:        http.StatusCreated,
 		},
 		{
-			name: "Test should return 409 when user already exists",
-			username: testUsername,
-			password: testPassword,
+			name:        "Test should return 409 when user already exists",
+			username:    testUsername,
+			password:    testPassword,
 			expectToken: false,
-			want: http.StatusConflict,
+			want:        http.StatusConflict,
 		},
 	}
 
@@ -86,62 +86,62 @@ func TestLogin(t *testing.T) {
 	defer clearTestUser(t, signupManager.db)
 
 	type args struct {
-		name string
-		username string
-		password string
+		name        string
+		username    string
+		password    string
 		expectToken bool
-		want int // http status code
+		want        int // http status code
 	}
 
 	tests := []args{
 		{
-			name: "Test should return 400 when username is too short",
-			username: "abc",
-			password: "defghijkl",
+			name:        "Test should return 400 when username is too short",
+			username:    "abc",
+			password:    "defghijkl",
 			expectToken: false,
-			want: http.StatusBadRequest,
+			want:        http.StatusBadRequest,
 		},
 		{
-			name: "Test should return 400 when password is too short",
-			username: "abcde",
-			password: "fgh",
+			name:        "Test should return 400 when password is too short",
+			username:    "abcde",
+			password:    "fgh",
 			expectToken: false,
-			want: http.StatusBadRequest,
+			want:        http.StatusBadRequest,
 		},
 		{
-			name: "Test should return 400 when username is empty",
-			username: "",
-			password: "abcdefghi",
+			name:        "Test should return 400 when username is empty",
+			username:    "",
+			password:    "abcdefghi",
 			expectToken: false,
-			want: http.StatusBadRequest,
+			want:        http.StatusBadRequest,
 		},
 		{
-			name: "Test should return 400 when password is empty",
-			username: "abcdefghi",
-			password: "",
+			name:        "Test should return 400 when password is empty",
+			username:    "abcdefghi",
+			password:    "",
 			expectToken: false,
-			want: http.StatusBadRequest,
+			want:        http.StatusBadRequest,
 		},
 		{
-			name: "Test should return 200 when user data is valid",
-			username: testUsername,
-			password: testPassword,
+			name:        "Test should return 200 when user data is valid",
+			username:    testUsername,
+			password:    testPassword,
 			expectToken: true,
-			want: http.StatusOK,
+			want:        http.StatusOK,
 		},
 		{
-			name: "Test should return 401 when data is valid but user does not exist",
-			username: "helloworldz",
-			password: testPassword,
+			name:        "Test should return 401 when data is valid but user does not exist",
+			username:    "helloworldz",
+			password:    testPassword,
 			expectToken: false,
-			want: http.StatusUnauthorized,
+			want:        http.StatusUnauthorized,
 		},
 		{
-			name: "Test should return 401 when username is correct but password is not",
-			username: testUsername,
-			password: testPassword+"foobar",
+			name:        "Test should return 401 when username is correct but password is not",
+			username:    testUsername,
+			password:    testPassword + "foobar",
 			expectToken: false,
-			want: http.StatusUnauthorized,
+			want:        http.StatusUnauthorized,
 		},
 	}
 
@@ -164,42 +164,42 @@ func TestCreateProject(t *testing.T) {
 	assert.NotEmpty(t, token, "response body should have a token")
 
 	type args struct {
-		name string
+		name        string
 		requestBody io.Reader
-		token string
-		want int // http status code
+		token       string
+		want        int // http status code
 	}
 
 	tests := []args{
 		{
-			name: "Test should return 201 when project doesn't exist and details are valid",
-			token: token,
+			name:        "Test should return 201 when project doesn't exist and details are valid",
+			token:       token,
 			requestBody: bytes.NewReader([]byte(`{"username": "helloworld", "name": "foo", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`)),
-			want: http.StatusCreated,
+			want:        http.StatusCreated,
 		},
 		{
-			name: "Test should return 409 when the project already exists for a user",
-			token: token,
+			name:        "Test should return 409 when the project already exists for a user",
+			token:       token,
 			requestBody: bytes.NewReader([]byte(`{"username": "helloworld", "name": "foo", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`)),
-			want: http.StatusConflict,
+			want:        http.StatusConflict,
 		},
 		{
-			name: "Test should return 201 when user provides no directories to start a new project",
-			token: token,
+			name:        "Test should return 201 when user provides no directories to start a new project",
+			token:       token,
 			requestBody: bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar"}`)),
-			want: http.StatusCreated,
+			want:        http.StatusCreated,
 		},
 		{
-			name: "Test should return 401 when user does not provide a token",
-			token: "",
+			name:        "Test should return 401 when user does not provide a token",
+			token:       "",
 			requestBody: bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar"}`)),
-			want: http.StatusUnauthorized,	
+			want:        http.StatusUnauthorized,
 		},
 		{
-			name: "Test should return 401 when user provides a malformed token",
-			token: token+"foobar123",
+			name:        "Test should return 401 when user provides a malformed token",
+			token:       token + "foobar123",
 			requestBody: bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar"}`)),
-			want: http.StatusUnauthorized,	
+			want:        http.StatusUnauthorized,
 		},
 	}
 
@@ -222,38 +222,38 @@ func TestViewProject(t *testing.T) {
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, fmt.Sprintf("expected %d but got %d", http.StatusCreated, got))
-	
+
 	type args struct {
-		name string
-		token string
+		name        string
+		token       string
 		queryString string
-		want int // http status code
+		want        int // http status code
 	}
 
 	tests := []args{
 		{
-			name: "Test should return 200 when request has a valid token and has a project with the correct name",
-			token: token,
+			name:        "Test should return 200 when request has a valid token and has a project with the correct name",
+			token:       token,
 			queryString: "?project_name=foobar",
-			want: http.StatusOK,
+			want:        http.StatusOK,
 		},
 		{
-			name: "Test should return 404 when request is valid but project does not exist for user",
-			token: token,
+			name:        "Test should return 404 when request is valid but project does not exist for user",
+			token:       token,
 			queryString: "?project_name=baz",
-			want: http.StatusNotFound,
+			want:        http.StatusNotFound,
 		},
 		{
-			name: "Test should return 401 when token is invalid",
-			token: token+"foobar123",
+			name:        "Test should return 401 when token is invalid",
+			token:       token + "foobar123",
 			queryString: "?project_name=foobar",
-			want: http.StatusUnauthorized,
+			want:        http.StatusUnauthorized,
 		},
 		{
-			name: "Test should return 401 when token is empty",
-			token: "",
+			name:        "Test should return 401 when token is empty",
+			token:       "",
 			queryString: "?project_name=foobar",
-			want: http.StatusUnauthorized,
+			want:        http.StatusUnauthorized,
 		},
 	}
 
@@ -289,44 +289,44 @@ func TestDeleteProject(t *testing.T) {
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, fmt.Sprintf("expected %d but got %d", http.StatusCreated, got))
-	
+
 	type args struct {
-		name string
+		name        string
 		queryString string
-		token string
-		want int // http status code
+		token       string
+		want        int // http status code
 	}
 
 	tests := []args{
 		{
-			name: "Test should return 204 when deleting a project that belongs to the user",
+			name:        "Test should return 204 when deleting a project that belongs to the user",
 			queryString: "?project_name=foobar",
-			token: token,
-			want: http.StatusNoContent,
+			token:       token,
+			want:        http.StatusNoContent,
 		},
 		{
-			name: "Test should return 404 when deleting a project that no longer exists",
+			name:        "Test should return 404 when deleting a project that no longer exists",
 			queryString: "?project_name=foobar",
-			token: token,
-			want: http.StatusNotFound,
+			token:       token,
+			want:        http.StatusNotFound,
 		},
 		{
-			name: "Test should return 401 when token is malformed.",
+			name:        "Test should return 401 when token is malformed.",
 			queryString: "?project_name=bar",
-			token: token+"foobar123",
-			want: http.StatusUnauthorized,
+			token:       token + "foobar123",
+			want:        http.StatusUnauthorized,
 		},
 		{
-			name: "Test should return 401 when token is missing",
+			name:        "Test should return 401 when token is missing",
 			queryString: "?project_name=baz",
-			token: "",
-			want: http.StatusUnauthorized,
+			token:       "",
+			want:        http.StatusUnauthorized,
 		},
 		{
-			name: "Test should return 400 when request params are invalid",
+			name:        "Test should return 400 when request params are invalid",
 			queryString: "?foo=bar",
-			token: token,
-			want: http.StatusBadRequest,
+			token:       token,
+			want:        http.StatusBadRequest,
 		},
 	}
 

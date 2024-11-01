@@ -15,15 +15,15 @@ const (
 )
 
 type RateLimiter struct {
-	MaxRequests int
-	RefreshDuration    time.Duration
-	Requests    map[string]int
+	MaxRequests     int
+	RefreshDuration time.Duration
+	Requests        map[string]int
 	IncrementAmount int
 	sync.Mutex
 }
 
 func NewRateLimiter(
-	maxRequests int, 
+	maxRequests int,
 	refreshDuration time.Duration,
 	incrementAmount int) *RateLimiter {
 
@@ -31,15 +31,15 @@ func NewRateLimiter(
 	log.Default().Println(message)
 
 	return &RateLimiter{
-		MaxRequests: maxRequests,
+		MaxRequests:     maxRequests,
 		IncrementAmount: incrementAmount,
-		RefreshDuration:    refreshDuration,
-		Requests:    make(map[string]int),
+		RefreshDuration: refreshDuration,
+		Requests:        make(map[string]int),
 	}
 }
 
 func (rl *RateLimiter) Refresh() {
-    ticker := time.NewTicker(rl.RefreshDuration)
+	ticker := time.NewTicker(rl.RefreshDuration)
 	for range ticker.C {
 		log.Default().Println("RateLimiter::Refresh - Refreshing request limits")
 		for ip, numRequests := range rl.Requests {
@@ -53,8 +53,8 @@ func (rl *RateLimiter) Refresh() {
 			message := fmt.Sprintf("RateLimiter::Refresh - IP %s has %d requests remaining after refresh", ip, rl.Requests[ip])
 			log.Default().Println(message)
 			rl.Unlock()
-		}	
-	}	
+		}
+	}
 }
 
 func (rl *RateLimiter) RateLimit(next http.HandlerFunc) http.HandlerFunc {

@@ -6,8 +6,8 @@ import (
 	"log"
 	"strconv"
 
-	"golang.org/x/crypto/bcrypt"
 	_ "github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type LoginManager struct {
@@ -34,7 +34,7 @@ func (lm *LoginManager) login(sd SignupData, doesUserExist func(string) bool) (s
 	}
 
 	if !doesUserExist(sd.Username) {
-	    return "", ErrUserDoesNotExist	
+		return "", ErrUserDoesNotExist
 	}
 
 	userId, hashedPassword, err := lm.getPassword(sd.Username)

@@ -49,10 +49,10 @@ func signJwt(username string, userId string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	tokenString, err := token.SignedString(jwtSecret)
-    if err != nil {
-        fmt.Println("signup.go::signJwt - Error signing token:", err)
-        return "", err
-    }
+	if err != nil {
+		fmt.Println("signup.go::signJwt - Error signing token:", err)
+		return "", err
+	}
 
 	return tokenString, nil
 }
@@ -64,20 +64,20 @@ func verifyToken(tk string) (bool, string, string) {
 		return false, "", ""
 	}
 
-    token, err := jwt.Parse(tk, func(token *jwt.Token) (interface{}, error) {
-        // Check the signing method
-        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-            return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-        }
-        return jwtSecret, nil
-    })
+	token, err := jwt.Parse(tk, func(token *jwt.Token) (interface{}, error) {
+		// Check the signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return jwtSecret, nil
+	})
 
-    if err != nil {
+	if err != nil {
 		message := fmt.Sprintf("Error parsing token: %v", err)
 		log.Default().Println(message)
-    }
+	}
 
-    if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		log.Default().Printf("Token is valid until %s for user %v\n", claims["exp"], claims["Username"])
 		log.Default().Println("Got claims from token: ", claims)
 
@@ -91,9 +91,9 @@ func verifyToken(tk string) (bool, string, string) {
 			return false, "", ""
 		}
 
-        return true, claims["Username"].(string), userId
-    }
-    
+		return true, claims["Username"].(string), userId
+	}
+
 	log.Default().Println("Token is invalid")
 	return false, "", ""
 }
@@ -140,7 +140,7 @@ func getErrorCode(err error) int {
 	}
 }
 
-func getAndConvertUserId(r *http.Request) (int, error)  {
+func getAndConvertUserId(r *http.Request) (int, error) {
 	userId := r.Header.Get("X-GO-DROPBOX-USER-ID")
 	id, err := strconv.Atoi(userId)
 	if err != nil {
@@ -151,7 +151,6 @@ func getAndConvertUserId(r *http.Request) (int, error)  {
 }
 
 // This function is a convenience so that one does not have to keep chasing down their login token
-// 
 func writeTokenToFile(token, username string) {
 	homeDir := os.Getenv("HOME")
 	tokenPath := fmt.Sprintf("%s/go-dropbox-token-%s.txt", homeDir, username)

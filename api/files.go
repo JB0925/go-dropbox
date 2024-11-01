@@ -12,16 +12,16 @@ import (
 )
 
 type FileData struct {
-	Name string `json:"name"`
-	Path string `json:"path"`
+	Name        string `json:"name"`
+	Path        string `json:"path"`
 	ProjectName string `json:"project_name"`
 }
 
 type SharingData struct {
-	Name string `json:"name"`
+	Name        string `json:"name"`
 	ProjectName string `json:"project_name"`
-	UserId int `json:"user_id"`
-	ProjectId int `json:"project_id"`
+	UserId      int    `json:"user_id"`
+	ProjectId   int    `json:"project_id"`
 }
 
 type FileManager struct {
@@ -213,7 +213,7 @@ func (fm *FileManager) doesFileExist(project_id, user_id int, fileName string) (
 //lint:ignore U1000 Ignore unused function in case of potential future use
 func (fm *FileManager) getDirectories(projectId int) ([]byte, error) {
 	// *** DEPRECATED ***
-	// Gets the directories map associated with the project. 
+	// Gets the directories map associated with the project.
 	// Is not needed as the directories are taken as a part of another query,
 	// thus avoiding an extra call to the database.
 	var directories []byte
@@ -263,7 +263,7 @@ func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, fil
 				"files": []interface{}{},
 			}
 		}
-		
+
 		// Move to the next directory
 		current = current[segment].(map[string]interface{})
 	}
@@ -279,8 +279,8 @@ func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, fil
 }
 
 func (fm *FileManager) updateProjectStructure(
-	projectId int, 
-	directories map[string]interface{}, 
+	projectId int,
+	directories map[string]interface{},
 	timestamp int64) error {
 	// This function updates the project structure in the database
 	directoriesToJson, err := json.Marshal(directories)
@@ -324,10 +324,10 @@ func (fm *FileManager) getFileOwnerData(projectName, username string) (int, int,
 }
 
 func (fm *FileManager) storeFile(
-	fd FileData, 
-	fileContent []byte, 
-	projectId, 
-	userId int, 
+	fd FileData,
+	fileContent []byte,
+	projectId,
+	userId int,
 	timestamp int64) error {
 	// A wrapper method used to call a database and store the contents of a file
 	// and its related metadata.
@@ -338,14 +338,14 @@ func (fm *FileManager) storeFile(
 	// @param: userId int - the user id of the file
 	// @return: error - An error if one exists
 	_, err := fm.db.Exec(
-		uploadFileQuery, 
-		fd.Name, 
-		fd.Path, 
-		fd.ProjectName, 
-		fileContent, 
-		userId, 
-		projectId, 
-		timestamp, 
+		uploadFileQuery,
+		fd.Name,
+		fd.Path,
+		fd.ProjectName,
+		fileContent,
+		userId,
+		projectId,
+		timestamp,
 		timestamp)
 
 	if err != nil {
@@ -358,8 +358,8 @@ func (fm *FileManager) storeFile(
 }
 
 func (fm *FileManager) findAndDeleteFileFromDirectories(
-	fileName, 
-	filePath string, 
+	fileName,
+	filePath string,
 	directories map[string]interface{}) error {
 	segments := strings.Split(strings.Trim(filePath, "/"), "/")
 	log.Default().Println("files.go::delete - Segments: ", segments[0])
@@ -378,7 +378,7 @@ func (fm *FileManager) findAndDeleteFileFromDirectories(
 			log.Default().Println("files.go::delete - File does not exist. Current path segment: ", segment)
 			return ErrFileDoesNotExist
 		}
-		
+
 		// Move to the next directory
 		current = current[segment].(map[string]interface{})
 	}
@@ -448,7 +448,7 @@ func (fm *FileManager) removeFileFromFilesArray(
 	// @param: filesInCurrentDir []interface{} - the "files" array in the current directory
 	// @param: fileName string - the name of the file to be removed
 	// @param: current map[string]interface{} - the current directory
-	filesInCurrentDir []interface{}, 
+	filesInCurrentDir []interface{},
 	fileName string,
 	current map[string]interface{}) {
 	for i, file := range filesInCurrentDir {
@@ -484,8 +484,8 @@ func (fm *FileManager) removeFileFromDataStore(
 }
 
 func (fm *FileManager) update(
-	fd FileData, 
-	fileContent []byte, 
+	fd FileData,
+	fileContent []byte,
 	userId int) error {
 	// This function updates a file in the database
 	// and returns an error if the file does not exist or
