@@ -11,9 +11,6 @@ export MAX_REQUESTS=5000
 go run . &
 app_pid=$!  # Save the PID of the go process
 
-# Set up a trap to kill the application on script exit
-trap 'kill -9 $app_pid' EXIT
-
 # Wait a moment to ensure the application starts
 sleep 1
 
