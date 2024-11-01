@@ -129,7 +129,7 @@ func signupUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::signupUser - Error signing up: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error signing up", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -147,7 +147,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::loginUser - Error decoding request body: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Invalid request body", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -155,7 +155,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::loginUser - Error logging in: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error logging in", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -181,14 +181,14 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::createProject - Error converting userId to int: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error creating project", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
 	if err = projectManager.createProject(pd, userId); err != nil {
 		message := fmt.Sprintf("server.go::createProject - Error creating project: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error creating project", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -209,7 +209,7 @@ func viewProject(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::viewProject - Error converting userId to int: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error viewing project", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -217,7 +217,7 @@ func viewProject(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::viewProject - Error viewing project: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error viewing project", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -253,7 +253,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::uploadFile - Error getting file: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error getting file", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -263,7 +263,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::uploadFile - Error reading file: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error reading file", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -278,7 +278,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	if err = fileManager.upload(fd, userName, fc); err != nil {
 		message := fmt.Sprintf("server.go::uploadFile - Error uploading file: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error uploading file", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -304,7 +304,7 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::downloadFile - Error getting file: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error getting file", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -346,7 +346,7 @@ func updateFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::uploadFile - Error getting file: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error getting file", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -356,7 +356,7 @@ func updateFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::uploadFile - Error reading file: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error reading file", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -371,7 +371,7 @@ func updateFile(w http.ResponseWriter, r *http.Request) {
 	if err = fileManager.update(fd, fc, userId); err != nil {
 		message := fmt.Sprintf("server.go::uploadFile - Error uploading file: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error uploading file", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -397,7 +397,7 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::deleteFile - Error deleting file: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error deleting file", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -419,7 +419,7 @@ func deleteProject(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::deleteProject - Error converting userId to int: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error deleting project", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
@@ -427,7 +427,7 @@ func deleteProject(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		message := fmt.Sprintf("server.go::deleteProject - Error deleting project: %v", err)
 		log.Default().Println(message)
-		http.Error(w, "Error deleting project", getErrorCode(err))
+		http.Error(w, err.Error(), getErrorCode(err))
 		return
 	}
 
