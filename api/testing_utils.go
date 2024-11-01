@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os/exec"
@@ -20,11 +21,14 @@ const (
 	signupEndpoint = "/signup"
 	loginEndpoint = "/login"
 	createProjectEndpoint = "/projects/create"
+	viewProjectEndpoint = "/projects/view"
 	defaultContentType = "application/json"
 	testUsername = "helloworld"
 	testPassword = "Testing123!"
 	contentTypeHeaderKey = "content-type"
 	authHeaderKey = "Authorization"
+	httpVerbGet = "GET"
+	httpVerbPost = "POST"
 )
 
 func startServer() {
@@ -95,7 +99,7 @@ func unMarshalResponseBody(b []byte, t *testing.T) map[string]interface{} {
 	return m
 }
 
-func signupOrLoginTestUser(t *testing.T, username, password, mode string) *http.Response {
+func signupOrLoginTestUser(t *testing.T, username, password, mode string, expectToken bool) (string, int) {
 	c := http.Client{}
 	url := baseUrl+mode
 	body := marshalRequestBody(map[string]string{
@@ -105,7 +109,21 @@ func signupOrLoginTestUser(t *testing.T, username, password, mode string) *http.
 	contentType := defaultContentType
 	r, err := c.Post(url, contentType, bytes.NewReader(body))
 	assert.Nil(t, err)
-	return r
+	defer r.Body.Close()
+
+	b, err := io.ReadAll(r.Body)
+	assert.Nil(t, err)
+
+	var m map[string]interface{}
+	var token string
+	if expectToken {
+		m = unMarshalResponseBody(b, t)
+		tk, ok := m["token"].(string)
+		assert.True(t, ok, "response body should have a token")
+		token = tk
+	}
+
+	return token, r.StatusCode
 }
 
 func clearTestUser(t *testing.T, db *sql.DB) {
@@ -113,4 +131,27 @@ func clearTestUser(t *testing.T, db *sql.DB) {
 	username := "helloworld"
 	_, err := db.Exec(query, username)
 	assert.Nil(t, err)
+}
+
+// makeRequest used to make a generic http request
+// where we can inject the method, path, body, etc.
+func makeRequest(
+	t *testing.T,
+	method,
+	path,
+	token string,
+	body io.Reader,
+) *http.Response {
+	c := http.Client{}
+	url := baseUrl+path
+	contentType := defaultContentType
+	req, err := http.NewRequest(method, url, body)
+	assert.Nil(t, err)
+	req.Header.Set(contentTypeHeaderKey, contentType)
+	if token != "" {
+		req.Header.Set(authHeaderKey, token)
+	}
+	r, err := c.Do(req)
+	assert.Nil(t, err)
+	return r
 }
