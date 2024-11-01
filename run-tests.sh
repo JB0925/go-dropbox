@@ -4,7 +4,7 @@
 echo "Starting Go application..."
 if [[ $HOSTNAME != *.local ]]; then
     # for CI environment
-    export DATABASE_URL=postgresql:///postgres?sslmode=disable
+    export DATABASE_URL=postgres://$DB_USER:$DB_PASSWORD@localhost:5432/postgres?sslmode=disable
 fi
 
 export MAX_REQUESTS=5000; go run . &
