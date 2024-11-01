@@ -1,0 +1,36 @@
+name: go-dropbox CI script to run tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.23.2
+
+      - name: Download dependencies
+        run: go mod download
+    
+      - name: Setup the database
+        run: source setup-test-db.sh
+        env:
+            PGPASSWORD: postgres
+
+      - name: Build the application
+        run: go build -v ./...
+
+      - name: Run tests
+        run: source run-tests.sh
