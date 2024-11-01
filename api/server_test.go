@@ -53,18 +53,18 @@ func TestSignup(t *testing.T) {
 			want: http.StatusBadRequest,
 		},
 		{
-			name: "Test should return 409 when user already exists",
-			username: "jesseb",
-			password: "testing123",
-			expectToken: false,
-			want: http.StatusConflict,
-		},
-		{
 			name: "Test should return 401 when data is valid and user does not exist",
 			username: testUsername,
 			password: testPassword,
 			expectToken: true,
 			want: http.StatusCreated,
+		},
+		{
+			name: "Test should return 409 when user already exists",
+			username: testUsername,
+			password: testPassword,
+			expectToken: false,
+			want: http.StatusConflict,
 		},
 	}
 

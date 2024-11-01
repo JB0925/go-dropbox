@@ -31,7 +31,7 @@ func newDb(dbUrl string) *sql.DB {
 
 	err = db.Ping()
 	if err != nil {
-		log.Default().Printf("utils::newDb - Error pinging database: %v", err)
+		log.Fatal("utils::newDb - Error pinging database: ", err)
 	}
 
 	return db
