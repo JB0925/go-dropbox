@@ -31,6 +31,7 @@ const (
 	httpVerbPost = "POST"
 )
 
+//lint:ignore U1000 Ignore unused function in case of potential future use
 func startServer() {
 	cmd := exec.Command("go", "run", "..")
 	if err := cmd.Run(); err != nil {
@@ -39,6 +40,7 @@ func startServer() {
 	}
 }
 
+//lint:ignore U1000 Ignore unused function in case of potential future use
 func killServer(pid string) {
 	cmd := exec.Command("sh", "-c", "kill -9 $(pgrep go-dropbox)")
 	if err := cmd.Run(); err != nil {
@@ -53,6 +55,7 @@ func killServer(pid string) {
 	}
 }
 
+//lint:ignore U1000 Ignore unused function in case of potential future use
 func stopServerAfterTest(t *testing.T) {
 	var buf bytes.Buffer
     var pid string
@@ -80,6 +83,7 @@ func stopServerAfterTest(t *testing.T) {
 	killServer(pid)
 }
 
+//lint:ignore U1000 Ignore unused function in case of potential future use
 func setupServerForTests() func(*testing.T) {
 	go startServer()
 	time.Sleep(500 * time.Millisecond)
