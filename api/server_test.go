@@ -167,7 +167,7 @@ func TestCreateProject(t *testing.T) {
 		name string
 		requestBody io.Reader
 		token string
-		want int
+		want int // http status code
 	}
 
 	tests := []args{
@@ -218,7 +218,7 @@ func TestViewProject(t *testing.T) {
 	defer clearTestUser(t, signupManager.db)
 
 	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
-	r := makeRequest(t, httpVerbPost, createProjectEndpoint, token, requestBody)
+	r := makeRequest(t, http.MethodPost, createProjectEndpoint, token, requestBody)
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, fmt.Sprintf("expected %d but got %d", http.StatusCreated, got))
@@ -227,7 +227,7 @@ func TestViewProject(t *testing.T) {
 		name string
 		token string
 		queryString string
-		want int
+		want int // http status code
 	}
 
 	tests := []args{
@@ -259,7 +259,7 @@ func TestViewProject(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := makeRequest(t, httpVerbGet, viewProjectEndpoint+tt.queryString, tt.token, bytes.NewReader([]byte{}))
+			r := makeRequest(t, http.MethodGet, viewProjectEndpoint+tt.queryString, tt.token, bytes.NewReader([]byte{}))
 			defer r.Body.Close()
 			got := r.StatusCode
 			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d status code but got %d", tt.want, got))
@@ -275,6 +275,69 @@ func TestViewProject(t *testing.T) {
 				_, exists := m["root"].(map[string]interface{})["bar"]
 				assert.True(t, exists)
 			}
+		})
+	}
+}
+
+func TestDeleteProject(t *testing.T) {
+	// create a user and then a project that belongs to the user
+	token, _ := signupOrLoginTestUser(t, testUsername, testPassword, signupEndpoint, true)
+	defer clearTestUser(t, signupManager.db)
+
+	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
+	r := makeRequest(t, http.MethodPost, createProjectEndpoint, token, requestBody)
+	defer r.Body.Close()
+	got := r.StatusCode
+	assert.Equal(t, http.StatusCreated, got, fmt.Sprintf("expected %d but got %d", http.StatusCreated, got))
+	
+	type args struct {
+		name string
+		queryString string
+		token string
+		want int // http status code
+	}
+
+	tests := []args{
+		{
+			name: "Test should return 204 when deleting a project that belongs to the user",
+			queryString: "?project_name=foobar",
+			token: token,
+			want: http.StatusNoContent,
+		},
+		{
+			name: "Test should return 404 when deleting a project that no longer exists",
+			queryString: "?project_name=foobar",
+			token: token,
+			want: http.StatusNotFound,
+		},
+		{
+			name: "Test should return 401 when token is malformed.",
+			queryString: "?project_name=bar",
+			token: token+"foobar123",
+			want: http.StatusUnauthorized,
+		},
+		{
+			name: "Test should return 401 when token is missing",
+			queryString: "?project_name=baz",
+			token: "",
+			want: http.StatusUnauthorized,
+		},
+		{
+			name: "Test should return 400 when request params are invalid",
+			queryString: "?foo=bar",
+			token: token,
+			want: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := bytes.NewReader([]byte("")) // no body required, but need to provide a default
+			r := makeRequest(t, http.MethodDelete, deleteProjectEndpoint+tt.queryString, tt.token, body)
+			defer r.Body.Close()
+
+			got := r.StatusCode
+			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d when deleting project, but got %d", tt.want, got))
 		})
 	}
 }

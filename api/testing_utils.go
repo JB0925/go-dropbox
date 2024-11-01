@@ -22,13 +22,12 @@ const (
 	loginEndpoint = "/login"
 	createProjectEndpoint = "/projects/create"
 	viewProjectEndpoint = "/projects/view"
+	deleteProjectEndpoint = "/projects/delete"
 	defaultContentType = "application/json"
 	testUsername = "helloworld"
 	testPassword = "Testing123!"
 	contentTypeHeaderKey = "content-type"
 	authHeaderKey = "Authorization"
-	httpVerbGet = "GET"
-	httpVerbPost = "POST"
 )
 
 //lint:ignore U1000 Ignore unused function in case of potential future use
