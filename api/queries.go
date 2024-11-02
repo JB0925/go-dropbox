@@ -1,5 +1,9 @@
 package api
 
+// These queries are used to perform CRUD operations on the various database tables
+// used by go-dropbox. To see the table definitions, please see `setup-test-db.sh`,
+// located at the root of the project.
+
 const checkUserExistsQuery = `SELECT * FROM users WHERE username = $1`
 const createNewUserQuery = `INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id`
 const getPasswordQuery = `SELECT id, password FROM users WHERE username = $1`
