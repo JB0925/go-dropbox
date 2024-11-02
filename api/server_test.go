@@ -205,7 +205,7 @@ func TestCreateProject(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := makeRequest(t, "POST", createProjectEndpoint, tt.token, tt.requestBody)
+			r := makeRequest(t, "POST", createProjectEndpoint, defaultContentType, tt.token, tt.requestBody)
 			defer r.Body.Close()
 			got := r.StatusCode
 			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d but got %d", tt.want, got))
@@ -218,7 +218,7 @@ func TestViewProject(t *testing.T) {
 	defer clearTestUser(t, signupManager.db)
 
 	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
-	r := makeRequest(t, http.MethodPost, createProjectEndpoint, token, requestBody)
+	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, fmt.Sprintf("expected %d but got %d", http.StatusCreated, got))
@@ -259,7 +259,7 @@ func TestViewProject(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := makeRequest(t, http.MethodGet, viewProjectEndpoint+tt.queryString, tt.token, bytes.NewReader([]byte{}))
+			r := makeRequest(t, http.MethodGet, viewProjectEndpoint+tt.queryString, defaultContentType, tt.token, bytes.NewReader([]byte{}))
 			defer r.Body.Close()
 			got := r.StatusCode
 			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d status code but got %d", tt.want, got))
@@ -285,7 +285,7 @@ func TestDeleteProject(t *testing.T) {
 	defer clearTestUser(t, signupManager.db)
 
 	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
-	r := makeRequest(t, http.MethodPost, createProjectEndpoint, token, requestBody)
+	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, fmt.Sprintf("expected %d but got %d", http.StatusCreated, got))
@@ -333,11 +333,97 @@ func TestDeleteProject(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			body := bytes.NewReader([]byte("")) // no body required, but need to provide a default
-			r := makeRequest(t, http.MethodDelete, deleteProjectEndpoint+tt.queryString, tt.token, body)
+			r := makeRequest(t, http.MethodDelete, deleteProjectEndpoint+tt.queryString, defaultContentType, tt.token, body)
 			defer r.Body.Close()
 
 			got := r.StatusCode
 			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d when deleting project, but got %d", tt.want, got))
+		})
+	}
+}
+
+func TestUploadFile(t *testing.T) {
+	// Setup test by:
+	// 1. Writing a test file to disk
+	// 2. Creating a user
+	// 3. Creating a project for that user
+	defer clearTestUser(t, signupManager.db)
+	writeFileForTesting(t)
+	token, statusCode := signupOrLoginTestUser(t, testUsername, testPassword, signupEndpoint, true)
+	assert.Equal(t, http.StatusCreated, statusCode, "Signup status code should be 201 when successful")
+
+	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
+	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	defer r.Body.Close()
+	got := r.StatusCode
+	assert.Equal(t, http.StatusCreated, got, "expected 201 when creating a valid project")
+
+	type args struct {
+		name        string
+		token       string
+		fileName    string
+		projectName string
+		filePath    string
+		want        int // http status code
+	}
+
+	tests := []args{
+		{
+			name:        "Test should return 201 with valid user and existing project",
+			token:       token,
+			fileName:    "foo.txt",
+			projectName: "foobar",
+			filePath:    "/root/bar",
+			want:        http.StatusCreated,
+		},
+		{
+			name:        "Test should return 400 when the path is not valid ( doesn't start with /root )",
+			token:       token,
+			fileName:    "bar.txt",
+			projectName: "foobar",
+			filePath:    "/foo/bar",
+			want:        http.StatusBadRequest,
+		},
+		{
+			name:        "Test should return 409 when the file is already uploaded",
+			token:       token,
+			fileName:    "foo.txt",
+			projectName: "foobar",
+			filePath:    "/root/bar",
+			want:        http.StatusConflict,
+		},
+		{
+			name:        "Test should return 404 when the project the file belongs to does not exist",
+			token:       token,
+			fileName:    "foo.txt",
+			projectName: "barbaz",
+			filePath:    "/root/bar",
+			want:        http.StatusNotFound,
+		},
+		{
+			name:        "Test should return 401 with a malformed token",
+			token:       token + "foobar123",
+			fileName:    "foo.txt",
+			projectName: "foobar",
+			filePath:    "/root/bar",
+			want:        http.StatusUnauthorized,
+		},
+		{
+			name:        "Test should return 401 with a malformed token",
+			token:       "",
+			fileName:    "foo.txt",
+			projectName: "foobar",
+			filePath:    "/root/bar",
+			want:        http.StatusUnauthorized,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := uploadTestFile(t, tt.token, tt.fileName, tt.projectName, tt.filePath)
+			defer r.Body.Close()
+			got := r.StatusCode
+			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d on file upload, but got %d", tt.want, got))
 		})
 	}
 }

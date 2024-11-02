@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
@@ -24,6 +26,7 @@ const (
 	createProjectEndpoint = "/projects/create"
 	viewProjectEndpoint   = "/projects/view"
 	deleteProjectEndpoint = "/projects/delete"
+	uploadFilesEndpoint   = "/files/upload"
 	defaultContentType    = "application/json"
 	testUsername          = "helloworld"
 	testPassword          = "Testing123!"
@@ -143,12 +146,12 @@ func makeRequest(
 	t *testing.T,
 	method,
 	path,
+	contentType,
 	token string,
 	body io.Reader,
 ) *http.Response {
 	c := http.Client{}
 	url := baseUrl + path
-	contentType := defaultContentType
 	req, err := http.NewRequest(method, url, body)
 	assert.Nil(t, err)
 	req.Header.Set(contentTypeHeaderKey, contentType)
@@ -169,4 +172,40 @@ func writeFileForTesting(t *testing.T) {
 	d := []byte("This is a file used for testing.")
 	err = os.WriteFile(dir+"/foo.txt", d, 0644)
 	assert.Nil(t, err)
+}
+
+func uploadTestFile(
+	t *testing.T,
+	token,
+	name,
+	projectName,
+	path string,
+) *http.Response {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	// Add fields to the multipart form
+	_ = writer.WriteField("name", name)
+	_ = writer.WriteField("project_name", projectName)
+	_ = writer.WriteField("path", path)
+
+	// Add the file to the multipart form
+	currentDir, err := os.Getwd()
+	assert.Nil(t, err)
+	filePath := currentDir + "/foo.txt"
+	file, err := os.Open(filePath)
+	assert.Nil(t, err)
+	defer file.Close()
+
+	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+	assert.Nil(t, err)
+
+	// Copy the file into the form part
+	_, err = io.Copy(part, file)
+	assert.Nil(t, err)
+
+	// Close the writer to finalize the form data
+	writer.Close()
+
+	return makeRequest(t, http.MethodPost, uploadFilesEndpoint, writer.FormDataContentType(), token, &body)
 }
