@@ -136,7 +136,10 @@ func signupUser(w http.ResponseWriter, r *http.Request) {
 	writeTokenToFile(token, sd.Username) // write the token to a file for later use - best effort
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"token": token})
+	err = json.NewEncoder(w).Encode(map[string]string{"token": token})
+	if err != nil {
+		log.Default().Printf("error when encoding payload to JSON: %v", err)
+	}
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
@@ -162,7 +165,10 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	writeTokenToFile(token, sd.Username) // write the token to a file for later use - best effort
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"token": token})
+	err = json.NewEncoder(w).Encode(map[string]string{"token": token})
+	if err != nil {
+		log.Default().Printf("error when encoding payload to JSON: %v", err)
+	}
 }
 
 func createProject(w http.ResponseWriter, r *http.Request) {
@@ -223,7 +229,10 @@ func viewProject(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{"project": string(project)})
+	err = json.NewEncoder(w).Encode(map[string]interface{}{"project": string(project)})
+	if err != nil {
+		log.Default().Printf("error when encoding payload to JSON: %v", err)
+	}
 }
 
 func uploadFile(w http.ResponseWriter, r *http.Request) {
@@ -313,7 +322,10 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", strconv.Itoa(len(file)))
 	w.WriteHeader(http.StatusOK)
-	w.Write(file)
+	_, err = w.Write(file)
+	if err != nil {
+		log.Default().Printf("error when writing file data to user on response: %v", err)
+	}
 }
 
 func updateFile(w http.ResponseWriter, r *http.Request) {
@@ -462,7 +474,10 @@ func shareFile(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"hash": hash})
+	err = json.NewEncoder(w).Encode(map[string]string{"hash": hash})
+	if err != nil {
+		log.Default().Printf("error when encoding payload to JSON: %v", err)
+	}
 }
 
 func getSharedFile(w http.ResponseWriter, r *http.Request) {
@@ -487,5 +502,8 @@ func getSharedFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", strconv.Itoa(len(fileData)))
 	w.WriteHeader(http.StatusOK)
-	w.Write(fileData)
+	_, err = w.Write(fileData)
+	if err != nil {
+		log.Default().Printf("error when writing file data to user on response: %v", err)
+	}
 }

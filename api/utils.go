@@ -41,7 +41,7 @@ func signJwt(username string, userId string) (string, error) {
 	claims := &JwtClaims{
 		Username: username,
 		UserId:   userId,
-		StandardClaims: jwt.StandardClaims{
+		StandardClaims: jwt.StandardClaims{ // nolint
 			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
 		},
 	}
