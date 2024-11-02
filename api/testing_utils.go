@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"syscall"
 	"testing"
@@ -157,4 +158,15 @@ func makeRequest(
 	r, err := c.Do(req)
 	assert.Nil(t, err)
 	return r
+}
+
+// This function's primary use case is to write a simple file to
+// the present dir for testing purposes so that it can be used for
+// upload, download, etc.
+func writeFileForTesting(t *testing.T) {
+	dir, err := os.Getwd()
+	assert.Nil(t, err)
+	d := []byte("This is a file used for testing.")
+	err = os.WriteFile(dir+"/foo.txt", d, 0644)
+	assert.Nil(t, err)
 }

@@ -1,12 +1,5 @@
 # Sample Queries
 
-# Note - Handling Auth
-When you login or signup, go-dropbox will write your JWT to a file in your `$HOME` directory. Instead of copy/pasting the JWT every time you call the API, you can do this:
-```
-curl -kv "http://localhost:8080/projects/view?project_name=foo" -H 'content-type: application/json' -H "Authorization: $(< ~/go-dropbox-token-jesseb.txt)" | jq -r '.project' | jq
-```
-Note the use of `-H "Authorization: $(< ~/go-dropbox-token-jesseb.txt)"`, which is saying to read the token from a file. Also note the use of double quotes here.
-
 ## Sign Up - returns a JWT
 ```
 curl -kv http://localhost:8080/signup -H 'content-type: application/json' -d '{"username": "jesseb", "password": "foobar"}'
@@ -20,7 +13,7 @@ curl -kv http://localhost:8080/login -H 'content-type: application/json' -d '{"u
 ## Helpful Tip Re: Auth Tokens in the CLI
 When you login to go-dropbox, it will write a JWT token to your home directory. This is the same token that is returned to you via /login. Instead of hunting down this token in your terminal, or copy and pasting from that file each time, you can do something like this:
 ```
-curl -kv "http://localhost:8080/projects/view?project_name=foo" -H 'content-type: application/json' -H "Authorization: $(cat ~/go-dropbox-token-jesseb.txt)" | jq -r '.project' | jq
+curl -kv "http://localhost:8080/projects/view?project_name=foo" -H 'content-type: application/json' -H "Authorization: $(cat ~/go-dropbox-token-<your-username>.txt)" | jq -r '.project' | jq
 ```
 
 That will use shell expansion to substitute your actual JWT token into the space where `$(cat ~/go-dropbox-token-username.txt)` resides.
@@ -91,3 +84,7 @@ curl -v http://localhost:8080/files/shared -H 'X-GO-DROPBOX-SHARED-HASH: 5ca07cf
 
 - Note that this endpoint requires no auth - if the user has the hash and the username of the person who
 created it, they will be able to download it.
+
+## Running the Tests
+- To run the tests, please run the script `run-tests.sh` via `./run-tests.sh`. This scripts starts a server
+for testing, runs the tests, and then tears the server down at the end.
