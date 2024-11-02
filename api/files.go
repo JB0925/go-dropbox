@@ -11,22 +11,24 @@ import (
 	"time"
 )
 
-type FileData struct {
-	Name        string `json:"name"`
-	Path        string `json:"path"`
-	ProjectName string `json:"project_name"`
-}
+type (
+	FileData struct {
+		Name        string `json:"name"`
+		Path        string `json:"path"`
+		ProjectName string `json:"project_name"`
+	}
 
-type SharingData struct {
-	Name        string `json:"name"`
-	ProjectName string `json:"project_name"`
-	UserId      int    `json:"user_id"`
-	ProjectId   int    `json:"project_id"`
-}
+	SharingData struct {
+		Name        string `json:"name"`
+		ProjectName string `json:"project_name"`
+		UserId      int    `json:"user_id"`
+		ProjectId   int    `json:"project_id"`
+	}
 
-type FileManager struct {
-	db *sql.DB
-}
+	FileManager struct {
+		db *sql.DB
+	}
+)
 
 func NewFileManager(dbUrl string) *FileManager {
 	db := newDb(dbUrl)
