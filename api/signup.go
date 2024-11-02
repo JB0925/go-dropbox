@@ -14,14 +14,16 @@ var (
 	jwtSecret = []byte("18yr6!b3@3r7")
 )
 
-type SignupData struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
+type (
+	SignupData struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
 
-type SignupManager struct {
-	db *sql.DB
-}
+	SignupManager struct {
+		db *sql.DB
+	}
+)
 
 func NewSignupManager(dbUrl string) *SignupManager {
 	db := newDb(dbUrl)
