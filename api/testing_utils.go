@@ -27,6 +27,7 @@ const (
 	viewProjectEndpoint   = "/projects/view"
 	deleteProjectEndpoint = "/projects/delete"
 	uploadFilesEndpoint   = "/files/upload"
+	updateFilesEndpoint   = "/files/update"
 	defaultContentType    = "application/json"
 	testUsername          = "helloworld"
 	testPassword          = "Testing123!"
@@ -166,19 +167,28 @@ func makeRequest(
 // This function's primary use case is to write a simple file to
 // the present dir for testing purposes so that it can be used for
 // upload, download, etc.
-func writeFileForTesting(t *testing.T) {
-	dir, err := os.Getwd()
+func writeFileForTesting(t *testing.T, data string) func(*testing.T, string) {
+	cwd, err := os.Getwd()
 	assert.Nil(t, err)
-	d := []byte("This is a file used for testing.")
-	err = os.WriteFile(dir+"/foo.txt", d, 0644)
+	file, err := os.OpenFile(cwd+"/foo.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    assert.Nil(t, err)
+    defer file.Close()
+	d := []byte(data)
+	_, err = file.Write(d)
 	assert.Nil(t, err)
+
+	return func(t *testing.T, fileName string) {
+		err := os.Remove(fileName)
+		assert.Nil(t, err)
+	}
 }
 
-func uploadTestFile(
+func uploadOrUpdateTestFile(
 	t *testing.T,
 	token,
 	name,
 	projectName,
+	endpoint,
 	path string,
 ) *http.Response {
 	var body bytes.Buffer
@@ -207,5 +217,5 @@ func uploadTestFile(
 	// Close the writer to finalize the form data
 	writer.Close()
 
-	return makeRequest(t, http.MethodPost, uploadFilesEndpoint, writer.FormDataContentType(), token, &body)
+	return makeRequest(t, http.MethodPost, endpoint, writer.FormDataContentType(), token, &body)
 }

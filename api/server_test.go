@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -348,7 +349,10 @@ func TestUploadFile(t *testing.T) {
 	// 2. Creating a user
 	// 3. Creating a project for that user
 	defer clearTestUser(t, signupManager.db)
-	writeFileForTesting(t)
+	cwd, err := os.Getwd()
+	assert.Nil(t, err)
+	deleteFunc := writeFileForTesting(t, "This is a file used for testing.")
+	defer deleteFunc(t, cwd+"/foo.txt")
 	token, statusCode := signupOrLoginTestUser(t, testUsername, testPassword, signupEndpoint, true)
 	assert.Equal(t, http.StatusCreated, statusCode, "Signup status code should be 201 when successful")
 
@@ -409,7 +413,7 @@ func TestUploadFile(t *testing.T) {
 			want:        http.StatusUnauthorized,
 		},
 		{
-			name:        "Test should return 401 with a malformed token",
+			name:        "Test should return 401 with a nonexistent token",
 			token:       "",
 			fileName:    "foo.txt",
 			projectName: "foobar",
@@ -420,10 +424,97 @@ func TestUploadFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := uploadTestFile(t, tt.token, tt.fileName, tt.projectName, tt.filePath)
+			r := uploadOrUpdateTestFile(t, tt.token, tt.fileName, tt.projectName, uploadFilesEndpoint, tt.filePath)
 			defer r.Body.Close()
 			got := r.StatusCode
 			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d on file upload, but got %d", tt.want, got))
+		})
+	}
+}
+
+func TestUpdateFile(t *testing.T) {
+	// Setup test by:
+	// 1. Writing a test file to disk
+	// 2. Creating a user
+	// 3. Creating a project for that user
+	defer clearTestUser(t, signupManager.db)
+	deleteFunc := writeFileForTesting(t, "This file is used for testing.\n")
+	cwd, err := os.Getwd()
+	assert.Nil(t, err)
+	defer deleteFunc(t, cwd+"/foo.txt")
+	token, statusCode := signupOrLoginTestUser(t, testUsername, testPassword, signupEndpoint, true)
+	assert.Equal(t, http.StatusCreated, statusCode, "Signup status code should be 201 when successful")
+
+	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
+	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	defer r.Body.Close()
+	got := r.StatusCode
+	assert.Equal(t, http.StatusCreated, got, "expected 201 when creating a valid project")
+
+	// upload the file - later we will try to modify it
+	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", uploadFilesEndpoint, "/root/bar")
+	defer r.Body.Close()
+	got = r.StatusCode
+	assert.Equal(t, http.StatusCreated, got, "Expected 201 when uploading a file")
+	
+	type args struct {
+		name string
+		token string
+		fileName string
+		projectName string
+		newFileData []byte
+		want int // http status code
+	}
+
+	tests := []args{
+		{
+			name: "File update should return 204 when token is valid, file belongs to given project, and project exists",
+			token: token,
+			fileName: "foo.txt",
+			projectName: "foobar",
+			newFileData: []byte("This is extra data for testing.\n"),
+			want: http.StatusNoContent,
+		},
+		{
+			name: "File update should return 404 when the project does not exist",
+			token: token,
+			fileName: "foo.txt",
+			projectName: "barbaz",
+			newFileData: []byte("This is extra data for testing.\n"),
+			want: http.StatusNotFound,
+		},
+		{
+			name: "File update should return 404 when the file does not exist in the project",
+			token: token,
+			fileName: "bar.jpg",
+			projectName: "foobar",
+			newFileData: []byte("This is extra data for testing.\n"),
+			want: http.StatusNotFound,
+		},
+		{
+			name: "File update should return 401 with a malformed token",
+			token: token+"foobar123",
+			fileName: "foo.txt",
+			projectName: "foobar",
+			newFileData: []byte("This is extra data for testing.\n"),
+			want: http.StatusUnauthorized,
+		},
+		{
+			name: "File update should return 401 with a nonexistent token",
+			token: "",
+			fileName: "foo.txt",
+			projectName: "foobar",
+			newFileData: []byte("This is extra data for testing.\n"),
+			want: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := uploadOrUpdateTestFile(t, tt.token, tt.fileName, tt.projectName, updateFilesEndpoint, "")
+			defer r.Body.Close()
+			got := r.StatusCode
+			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d from update file call, but got %d", tt.want, got))
 		})
 	}
 }
