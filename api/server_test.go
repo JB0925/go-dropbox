@@ -518,3 +518,115 @@ func TestUpdateFile(t *testing.T) {
 		})
 	}
 }
+
+func TestDownloadFile(t *testing.T) {
+	// Setup test by:
+	// 1. Writing a test file to disk
+	// 2. Creating a user
+	// 3. Creating a project for that user
+	defer clearTestUser(t, signupManager.db)
+	deleteFunc := writeFileForTesting(t, "This is a file used for testing.")
+	cwd, err := os.Getwd()
+	assert.Nil(t, err)
+	defer deleteFunc(t, cwd+"/foo.txt")
+	token, statusCode := signupOrLoginTestUser(t, testUsername, testPassword, signupEndpoint, true)
+	assert.Equal(t, http.StatusCreated, statusCode, "Signup status code should be 201 when successful")
+
+	// create the project for the user
+	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
+	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	defer r.Body.Close()
+	got := r.StatusCode
+	assert.Equal(t, http.StatusCreated, got, "expected 201 when creating a valid project")
+
+	// upload the file - later we will try to download it in different scenarios
+	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", uploadFilesEndpoint, "/root/bar")
+	defer r.Body.Close()
+	got = r.StatusCode
+	assert.Equal(t, http.StatusCreated, got, "Expected 201 when uploading a file")
+
+	type args struct {
+		name string
+		token string
+		fileName string
+		projectName string
+		endpoint string
+		want int // http status code
+	}
+
+	tests := []args{
+		{
+			name: "Test file download returns 200 with existing file, existing project, and valid token",
+			token: token,
+			fileName: "foo.txt",
+			projectName: "foobar",
+			endpoint: downloadFilesEndpoint+"?name=%s&project_name=%s",
+			want: http.StatusOK,
+		},
+		{
+			name: "Test file download returns 404 with nonexistent file",
+			token: token,
+			fileName: "bar.txt",
+			projectName: "foobar",
+			endpoint: downloadFilesEndpoint+"?name=%s&project_name=%s",
+			want: http.StatusNotFound,
+		},
+		{
+			name: "Test file download returns 404 with nonexistent project",
+			token: token,
+			fileName: "foo.txt",
+			projectName: "barbaz",
+			endpoint: downloadFilesEndpoint+"?name=%s&project_name=%s",
+			want: http.StatusNotFound,
+		},
+		{
+			name: "Test file download returns 400 with missing project_name field",
+			token: token,
+			fileName: "foo.txt",
+			projectName: "",
+			endpoint: downloadFilesEndpoint+"?name=%s&%s",
+			want: http.StatusBadRequest,
+		},
+		{
+			name: "Test file download returns 401 with malformed token",
+			token: token+"foobar123",
+			fileName: "foo.txt",
+			projectName: "foobar",
+			endpoint: downloadFilesEndpoint+"?name=%s&project_name=%s",
+			want: http.StatusUnauthorized,
+		},
+		{
+			name: "Test file download returns 401 with nonexistent token",
+			token: "",
+			fileName: "foo.txt",
+			projectName: "foobar",
+			endpoint: downloadFilesEndpoint+"?name=%s&project_name=%s",
+			want: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			formattedEndpoint := fmt.Sprintf(tt.endpoint, tt.fileName, tt.projectName)
+			r := makeRequest(
+				t,
+				http.MethodGet,
+				formattedEndpoint,
+				defaultContentType,
+				tt.token,
+				bytes.NewReader([]byte("")),
+			)
+
+			defer r.Body.Close()
+			got := r.StatusCode
+			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d on file download, but got %d", tt.want, got))
+
+			if got == http.StatusOK {
+				// file is 32 bytes
+				contentLength := r.Header.Get("Content-Length")
+				assert.NotEmpty(t, contentLength)
+				assert.Equal(t, "32", contentLength, fmt.Sprintf("expected content length 32, but got %s", contentLength))
+			}
+		})
+	}
+}

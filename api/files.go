@@ -111,6 +111,9 @@ func (fm FileManager) download(projectName, fileName, userName string) ([]byte, 
 	if err != nil {
 		message := fmt.Sprintf("files.go::get - Error querying database: %v", err)
 		log.Default().Println(message)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrFileDoesNotExist
+		}
 		return nil, err
 	}
 
