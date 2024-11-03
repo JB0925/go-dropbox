@@ -393,12 +393,20 @@ func updateFile(w http.ResponseWriter, r *http.Request) {
 func deleteFile(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var d map[string]string
+	numDeleteParams := 3
 
 	err := json.NewDecoder(r.Body).Decode(&d)
 	if err != nil {
 		message := fmt.Sprintf("server.go::deleteFile - Error decoding request body: %v", err)
 		log.Default().Println(message)
 		http.Error(w, "Invalid request body", getErrorCode(err))
+		return
+	}
+
+	if len(d) != numDeleteParams {
+		message := fmt.Sprintf("server.go::deleteFile - not enough params provided in delete file request. Body: %v", d)
+		log.Default().Println(message)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 

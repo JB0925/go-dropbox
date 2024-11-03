@@ -29,6 +29,7 @@ const (
 	uploadFilesEndpoint   = "/files/upload"
 	updateFilesEndpoint   = "/files/update"
 	downloadFilesEndpoint = "/files/download"
+	deleteFilesEndpoint   = "/files/delete"
 	defaultContentType    = "application/json"
 	testUsername          = "helloworld"
 	testPassword          = "Testing123!"

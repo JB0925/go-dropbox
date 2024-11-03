@@ -630,3 +630,120 @@ func TestDownloadFile(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteFile(t *testing.T) {
+	// Setup test by:
+	// 1. Writing a test file to disk
+	// 2. Creating a user
+	// 3. Creating a project for that user
+	defer clearTestUser(t, signupManager.db)
+	deleteFunc := writeFileForTesting(t, "This is a file used for testing.")
+	cwd, err := os.Getwd()
+	assert.Nil(t, err)
+	defer deleteFunc(t, cwd+"/foo.txt")
+	token, statusCode := signupOrLoginTestUser(t, testUsername, testPassword, signupEndpoint, true)
+	assert.Equal(t, http.StatusCreated, statusCode, "Signup status code should be 201 when successful")
+
+	// create the project for the user
+	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
+	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	defer r.Body.Close()
+	got := r.StatusCode
+	assert.Equal(t, http.StatusCreated, got, "expected 201 when creating a valid project")
+
+	// upload the file - later we will try to delete it in different scenarios
+	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", uploadFilesEndpoint, "/root/bar")
+	defer r.Body.Close()
+	got = r.StatusCode
+	assert.Equal(t, http.StatusCreated, got, "Expected 201 when uploading a file")
+
+	type args struct {
+		name string
+		token string
+		fileName string
+		filePath string
+		projectName string
+		body string
+		want int // http status code
+	}
+
+	tests := []args{
+		{
+			name: "Test delete file should return 404 when the file does not exist at the given path",
+			token: token,
+			fileName: "foo.txt",
+			filePath: "/root/boo", // file exists in project, but not at this path
+			projectName: "foobar",
+			body: `{"name": "%s", "path": "%s", "project_name": "%s"}`,
+			want: http.StatusNotFound,
+		},
+		{
+			name: "Test delete file should return 404 when the file does not exist at all",
+			token: token,
+			fileName: "baz.txt", // no such file at all
+			filePath: "/root/bat",
+			projectName: "foobar",
+			body: `{"name": "%s", "path": "%s", "project_name": "%s"}`,
+			want: http.StatusNotFound,
+		},
+		{
+			name: "Test delete file should return 204 with a valid token, existing project, and existing file",
+			token: token,
+			fileName: "foo.txt",
+			filePath: "/root/bar",
+			projectName: "foobar",
+			body: `{"name": "%s", "path": "%s", "project_name": "%s"}`,
+			want: http.StatusNoContent,
+		},
+		{
+			name: "Test delete file should return 400 when not all params are provided in request body",
+			token: token,
+			fileName: "foo.txt",
+			filePath: "/root/bar",
+			projectName: "foobar",
+			body: `{"name": "%s", "path": "%s"}`,
+			want: http.StatusBadRequest,
+		},
+		{
+			name: "Test delete file should return 401 when token is malformed",
+			token: token+"foobar123",
+			fileName: "foo.txt",
+			filePath: "/root/bar",
+			projectName: "foobar",
+			body: `{"name": "%s", "path": "%s", "project_name": "%s"}`,
+			want: http.StatusUnauthorized,
+		},
+		{
+			name: "Test delete file should return 401 when token does not exist",
+			token: "",
+			fileName: "foo.txt",
+			filePath: "/root/bar",
+			projectName: "foobar",
+			body: `{"name": "%s", "path": "%s", "project_name": "%s"}`,
+			want: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := fmt.Sprintf(tt.body, tt.fileName, tt.filePath, tt.projectName)
+			body := bytes.NewReader([]byte(b))
+			r := makeRequest(t, http.MethodDelete, deleteFilesEndpoint, defaultContentType, tt.token, body)
+			defer r.Body.Close()
+
+			got := r.StatusCode
+			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d on delete file call, but got %d", tt.want, got))
+
+			if got == http.StatusNoContent {
+				queryString := "?project_name=foobar"
+				r := makeRequest(t, http.MethodGet, viewProjectEndpoint+queryString, defaultContentType, tt.token, bytes.NewReader([]byte{}))
+				defer r.Body.Close()
+
+				b, err := io.ReadAll(r.Body)
+				assert.Nil(t, err)
+
+				assert.NotContains(t, string(b), tt.fileName)
+			}
+		})
+	}
+}
