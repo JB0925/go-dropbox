@@ -857,13 +857,14 @@ func TestFileSharingByUser(t *testing.T) {
 				assert.Nil(t, err)
 				payload := unMarshalResponseBody(b, t)
 
-				hash, ok := payload["hash"]
+				hash, ok := payload["hash"].(string)
 				assert.True(t, ok)
-				h, ok := hash.(string)
-				assert.True(t, ok)
-
-				assert.Len(t, h, 64, "hash should be a 64 character string")
+				assert.Len(t, hash, 64, "hash should be a 64 character string")
 			}
 		})
 	}
+}
+
+func TestGettingSharedFile(t *testing.T) {
+	t.SkipNow()
 }
