@@ -465,6 +465,12 @@ func shareFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if sd.Name == "" || sd.ProjectId == 0 || sd.ProjectName == "" {
+		log.Default().Printf("Invalid request body - one or more fields are empty: %v", sd)
+		http.Error(w, "One or more request body fields are missing. Requires name, project_name, and project_id", http.StatusBadRequest)
+		return
+	}
+
 	userId, err := getAndConvertUserId(r)
 	if err != nil || userId == 0 {
 		log.Default().Printf("User id does not exist or is invalid. User ID: %d", userId)
@@ -476,7 +482,7 @@ func shareFile(w http.ResponseWriter, r *http.Request) {
 	hash, err := fileManager.storeFileHashForSharing(sd)
 	if err != nil {
 		log.Default().Println("error storing hash for sharing file. Err: %w", err)
-		http.Error(w, "Error storing hash for file sharing.", http.StatusInternalServerError)
+		http.Error(w, "Error storing hash for file sharing.", getErrorCode(err))
 		return
 	}
 

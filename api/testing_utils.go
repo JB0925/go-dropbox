@@ -30,6 +30,7 @@ const (
 	updateFilesEndpoint   = "/files/update"
 	downloadFilesEndpoint = "/files/download"
 	deleteFilesEndpoint   = "/files/delete"
+	sharingFilesEndpoint  = "/files/sharing"
 	defaultContentType    = "application/json"
 	testUsername          = "helloworld"
 	testPassword          = "Testing123!"
@@ -220,4 +221,14 @@ func uploadOrUpdateTestFile(
 	writer.Close()
 
 	return makeRequest(t, http.MethodPost, endpoint, writer.FormDataContentType(), token, &body)
+}
+
+// Method used in testing to get the id of the current project. The id column is 
+// autoincrementing, so it will change from test to test.
+func getProjectIdForTesting(t *testing.T, db *sql.DB, projectName string) int {
+	var id int
+	err := db.QueryRow(`SELECT id FROM projects WHERE project_name = $1`, projectName).Scan(&id)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, id)
+	return id
 }

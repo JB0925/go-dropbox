@@ -747,3 +747,123 @@ func TestDeleteFile(t *testing.T) {
 		})
 	}
 }
+
+func TestFileSharingByUser(t *testing.T) {
+	// Setup test by:
+	// 1. Writing a test file to disk
+	// 2. Creating a user
+	// 3. Creating a project for that user
+	defer clearTestUser(t, signupManager.db)
+	deleteFunc := writeFileForTesting(t, "This is a file used for testing.")
+	cwd, err := os.Getwd()
+	assert.Nil(t, err)
+	defer deleteFunc(t, cwd+"/foo.txt")
+	token, statusCode := signupOrLoginTestUser(t, testUsername, testPassword, signupEndpoint, true)
+	assert.Equal(t, http.StatusCreated, statusCode, "Signup status code should be 201 when successful")
+
+	// create the project for the user
+	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
+	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	defer r.Body.Close()
+	got := r.StatusCode
+	assert.Equal(t, http.StatusCreated, got, "expected 201 when creating a valid project")
+
+	// upload the file - later we will try to delete it in different scenarios
+	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", uploadFilesEndpoint, "/root/bar")
+	defer r.Body.Close()
+	got = r.StatusCode
+	assert.Equal(t, http.StatusCreated, got, "Expected 201 when uploading a file")
+	
+	// get the project id for the file sharing call
+	projectId := getProjectIdForTesting(t, signupManager.db, "foobar")
+
+	type args struct {
+		name string
+		token string
+		fileName string
+		projectName string
+		projectId int
+		body string
+		want int // http status code
+	}
+
+	tests := []args{
+		{
+			name: "Test sharing a file should return 200 on successful call",
+			token: token,
+			fileName: "foo.txt",
+			projectName: "foobar",
+			projectId: projectId,
+			body: `{"name": "%s", "project_name": "%s", "project_id": %d}`,
+			want: http.StatusOK,
+		},
+		{
+			name: "Test sharing a file should return 404 on a nonexistent file",
+			token: token,
+			fileName: "bar.txt",
+			projectName: "foobar",
+			projectId: projectId,
+			body: `{"name": "%s", "project_name": "%s", "project_id": %d}`,
+			want: http.StatusNotFound,
+		},
+		{
+			name: "Test sharing a file should return 404 on a nonexistent project",
+			token: token,
+			fileName: "foo.txt",
+			projectName: "barbar",
+			projectId: projectId,
+			body: `{"name": "%s", "project_name": "%s", "project_id": %d}`,
+			want: http.StatusNotFound,	
+		},
+		{
+			name: "Test sharing a file should return 400 when request body is invalid",
+			token: token,
+			fileName: "foo.txt",
+			projectName: "foobar",
+			projectId: projectId,
+			body: `{"name": "%s", "project_name": "%s"}`,
+			want: http.StatusBadRequest,
+		},
+		{
+			name: "Test sharing a file should return 401 with a malformed token",
+			token: token+"foobar123",
+			fileName: "foo.txt",
+			projectName: "foobar",
+			projectId: projectId,
+			body: `{"name": "%s", "project_name": "%s", "project_id": %d}`,
+			want: http.StatusUnauthorized,
+		},
+		{
+			name: "Test sharing a file should return 401 with a nonexistent token",
+			token: "",
+			fileName: "foo.txt",
+			projectName: "foobar",
+			projectId: projectId,
+			body: `{"name": "%s", "project_name": "%s", "project_id": %d}`,
+			want: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := bytes.NewReader([]byte(fmt.Sprintf(tt.body, tt.fileName, tt.projectName, tt.projectId)))
+			r := makeRequest(t, http.MethodPost, sharingFilesEndpoint, defaultContentType, tt.token, b)
+			defer r.Body.Close()
+
+			got := r.StatusCode
+			assert.Equal(t, tt.want, got, fmt.Sprintf("expecting %d on file sharing call, but got %d", tt.want, got))
+			if got == http.StatusOK {
+				b, err := io.ReadAll(r.Body)
+				assert.Nil(t, err)
+				payload := unMarshalResponseBody(b, t)
+
+				hash, ok := payload["hash"]
+				assert.True(t, ok)
+				h, ok := hash.(string)
+				assert.True(t, ok)
+
+				assert.Len(t, h, 64, "hash should be a 64 character string")
+			}
+		})
+	}
+}
