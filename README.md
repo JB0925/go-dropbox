@@ -1,3 +1,7 @@
+# Running the App
+Simply run `go run .` to run the app. Note that this requires that you have Go installed on your system.
+For more on how to install Go, please see the official [documentation](https://go.dev/doc/install).
+
 # Sample Queries
 
 ## Sign Up - returns a JWT
@@ -86,5 +90,4 @@ curl -v http://localhost:8080/files/shared -H 'X-GO-DROPBOX-SHARED-HASH: 5ca07cf
 created it, they will be able to download it.
 
 ## Running the Tests
-- To run the tests, please run the script `run-tests.sh` via `./run-tests.sh`. This scripts starts a server
-for testing, runs the tests, and then tears the server down at the end.
+- To run the tests, please run `make test`. If you do not have `make` on your machine, you can run `./run-tests.sh` instead. This script starts a server for testing, runs the tests, and then tears the server down at the end.
