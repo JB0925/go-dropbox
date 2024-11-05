@@ -31,11 +31,14 @@ const (
 	downloadFilesEndpoint = "/files/download"
 	deleteFilesEndpoint   = "/files/delete"
 	sharingFilesEndpoint  = "/files/sharing"
+	sharedFilesEndpoint   = "/files/shared"
 	defaultContentType    = "application/json"
 	testUsername          = "helloworld"
 	testPassword          = "Testing123!"
 	contentTypeHeaderKey  = "content-type"
 	authHeaderKey         = "Authorization"
+	sharerHeaderKey       = "X-GO-DROPBOX-SHARER"
+	sharedHashHeaderKey   = "X-GO-DROPBOX-SHARED-HASH"
 )
 
 //lint:ignore U1000 Ignore unused function in case of potential future use

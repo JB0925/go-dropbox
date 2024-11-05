@@ -866,5 +866,67 @@ func TestFileSharingByUser(t *testing.T) {
 }
 
 func TestGettingSharedFile(t *testing.T) {
-	t.SkipNow()
+	// Setup test by:
+	// 1. Writing a test file to disk
+	// 2. Creating a user
+	// 3. Creating a project for that user
+	defer clearTestUser(t, signupManager.db)
+	deleteFunc := writeFileForTesting(t, "This is a file used for testing.")
+	cwd, err := os.Getwd()
+	assert.Nil(t, err)
+	defer deleteFunc(t, cwd+"/foo.txt")
+	token, statusCode := signupOrLoginTestUser(t, testUsername, testPassword, signupEndpoint, true)
+	assert.Equal(t, http.StatusCreated, statusCode, "Signup status code should be 201 when successful")
+
+	// create the project for the user
+	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
+	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	defer r.Body.Close()
+	got := r.StatusCode
+	assert.Equal(t, http.StatusCreated, got, "expected 201 when creating a valid project")
+
+	// upload the file - next we will share it and later try to get the shared file in different scenarios
+	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", uploadFilesEndpoint, "/root/bar")
+	defer r.Body.Close()
+	got = r.StatusCode
+	assert.Equal(t, http.StatusCreated, got, "Expected 201 when uploading a file")
+
+	// share the file
+	projectId := getProjectIdForTesting(t, signupManager.db, "foobar")
+	body := bytes.NewReader([]byte(fmt.Sprintf(`{"name": "foo.txt", "project_name": "foobar", "project_id": %d}`, projectId)))
+	r = makeRequest(t, http.MethodPost, sharingFilesEndpoint, defaultContentType, token, body)
+	defer r.Body.Close()
+
+	// get the hash from the response payload
+	p, err := io.ReadAll(r.Body)
+	assert.Nil(t, err)
+	payload := unMarshalResponseBody(p, t)
+	hash, ok := payload["hash"].(string)
+	assert.True(t, ok)
+
+	// try to get the file via sharing - this one should succeed
+	c := http.Client{}
+	req, err := http.NewRequest(http.MethodGet, baseUrl+sharedFilesEndpoint, bytes.NewReader([]byte("")))
+	assert.Nil(t, err)
+	req.Header.Set(sharerHeaderKey, "helloworld")
+	req.Header.Set(sharedHashHeaderKey, hash)
+	r, err = c.Do(req)
+	assert.Nil(t, err)
+	defer r.Body.Close()
+	assert.Equal(t, http.StatusOK, r.StatusCode, fmt.Sprintf("expected %d when getting shared file, but got %d", http.StatusOK, r.StatusCode))
+
+	// change file - this will generate a different hash
+	_ = writeFileForTesting(t, "Some more new data.")
+	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", updateFilesEndpoint, "/root/bar")
+	defer r.Body.Close()
+
+	// try to get the shared file again - this should not succeed and should result in 410 Gone
+	req, err = http.NewRequest(http.MethodGet, baseUrl+sharedFilesEndpoint, bytes.NewReader([]byte("")))
+	assert.Nil(t, err)
+	req.Header.Set(sharerHeaderKey, "helloworld")
+	req.Header.Set(sharedHashHeaderKey, hash)
+	r, err = c.Do(req)
+	assert.Nil(t, err)
+	defer r.Body.Close()
+	assert.Equal(t, http.StatusGone, r.StatusCode, fmt.Sprintf("expected %d when getting shared file, but got %d", http.StatusOK, r.StatusCode))	
 }
