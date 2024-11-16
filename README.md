@@ -14,7 +14,7 @@
 - delete a file
 - download a file
 - share a file with anyone
-- download a shared file ( available to anyone, even non-account holding users)
+- download a shared file ( available to anyone, even non-account holding users )
 
 
 # Running the App
