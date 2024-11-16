@@ -1,3 +1,22 @@
+# Welcome to go-dropbox!
+`go-dropbox` is an app designed to allow a user to create projects and upload files associated with those projects. A user can also share files with another person who is not necessarily a user. `go-dropbox` can be used for file storage and file sharing.
+
+`go-dropbox` is a RESTful web API, and the following documentation is written to explain how to interact with it. Please keep in mind that there is no user interface at this time, so the primary way to interact with the API is via cURL or some other HTTP client.
+
+`go-dropbox` allows a user to:
+- register an account
+- login and get a JWT token for further operations.
+- create a project
+- view a project
+- delete a project ( doing so deletes all associated files )
+- upload a file ( doing so will also update the project structure )
+- update a file
+- delete a file
+- download a file
+- share a file with anyone
+- download a shared file ( available to anyone, even non-account holding users)
+
+
 # Running the App
 Simply run `go run .` to run the app. Note that this requires that you have Go installed on your system.
 For more on how to install Go, please see the official [documentation](https://go.dev/doc/install).
