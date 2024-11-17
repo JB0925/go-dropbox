@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 
 	"github.com/jbrink/go-dropbox/rate_limiter"
@@ -57,21 +58,23 @@ func NewServer() *http.Server {
 		log.Default().Printf("Updating max requests for rate limiting purposes: %s", maxRequests)
 		rateLimiter.MaxRequests = parseMaxRequests(maxRequests) // make this change for testing
 	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/signup", rateLimiter.RateLimit(http.HandlerFunc(signupUser)))
-	mux.HandleFunc("/login", rateLimiter.RateLimit(http.HandlerFunc(loginUser)))
-	mux.HandleFunc("/projects/create", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(createProject))))
-	mux.HandleFunc("/projects/view", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(viewProject))))
-	mux.HandleFunc("/projects/delete", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(deleteProject))))
-	mux.HandleFunc("/files/upload", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(uploadFile))))
-	mux.HandleFunc("/files/update", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(updateFile))))
-	mux.HandleFunc("/files/download", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(downloadFile))))
-	mux.HandleFunc("/files/delete", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(deleteFile))))
-	mux.HandleFunc("/files/sharing", rateLimiter.RateLimit(checkAuth(http.HandlerFunc(shareFile))))
-	mux.HandleFunc("/files/shared", rateLimiter.RateLimit(http.HandlerFunc(getSharedFile)))
+	m := mux.NewRouter()
+	m.Use(rateLimiter.RateLimit)
+	
+	m.HandleFunc("/signup", http.HandlerFunc(signupUser))
+	m.HandleFunc("/login", http.HandlerFunc(loginUser))
+	m.HandleFunc("/projects/create", checkAuth(http.HandlerFunc(createProject)))
+	m.HandleFunc("/projects/view", checkAuth(http.HandlerFunc(viewProject)))
+	m.HandleFunc("/projects/delete", checkAuth(http.HandlerFunc(deleteProject)))
+	m.HandleFunc("/files/upload", checkAuth(http.HandlerFunc(uploadFile)))
+	m.HandleFunc("/files/update", checkAuth(http.HandlerFunc(updateFile)))
+	m.HandleFunc("/files/download", checkAuth(http.HandlerFunc(downloadFile)))
+	m.HandleFunc("/files/delete", checkAuth(http.HandlerFunc(deleteFile)))
+	m.HandleFunc("/files/sharing", checkAuth(http.HandlerFunc(shareFile)))
+	m.HandleFunc("/files/shared", http.HandlerFunc(getSharedFile))
 
 	return &http.Server{
-		Handler: mux,
+		Handler: m,
 		Addr:    ":8080",
 	}
 }

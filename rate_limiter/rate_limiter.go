@@ -57,8 +57,8 @@ func (rl *RateLimiter) Refresh() {
 	}
 }
 
-func (rl *RateLimiter) RateLimit(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func (rl *RateLimiter) RateLimit(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rl.Lock()
 		defer rl.Unlock()
 
@@ -96,5 +96,5 @@ func (rl *RateLimiter) RateLimit(next http.HandlerFunc) http.HandlerFunc {
 		log.Default().Println(message)
 		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(rl.Requests[ip]))
 		next.ServeHTTP(w, r)
-	}
+	})
 }

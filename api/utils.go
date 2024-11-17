@@ -7,10 +7,15 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+)
+
+var (
+	loginExcludedPaths = []string{"/login", "/signup", "/files/shared"}
 )
 
 type JwtClaims struct {
@@ -100,6 +105,11 @@ func verifyToken(tk string) (bool, string, string) {
 
 func checkAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if slices.Contains(loginExcludedPaths, r.URL.Path) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		
 		auth := r.Header.Get("Authorization")
 		validToken, username, userId := verifyToken(auth)
 		if auth == "" || !validToken {
