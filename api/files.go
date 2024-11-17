@@ -346,7 +346,6 @@ func (fm *FileManager) storeFile(
 		uploadFileQuery,
 		fd.Name,
 		fd.Path,
-		fd.ProjectName,
 		fileContent,
 		userId,
 		projectId,
