@@ -206,7 +206,7 @@ func TestCreateProject(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := makeRequest(t, "POST", createProjectEndpoint, defaultContentType, tt.token, tt.requestBody)
+			r := makeRequest(t, http.MethodPost, projectsEndpoint, defaultContentType, tt.token, tt.requestBody)
 			defer r.Body.Close()
 			got := r.StatusCode
 			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d but got %d", tt.want, got))
@@ -219,7 +219,7 @@ func TestViewProject(t *testing.T) {
 	defer clearTestUser(t, signupManager.db)
 
 	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
-	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	r := makeRequest(t, http.MethodPost, projectsEndpoint, defaultContentType, token, requestBody)
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, fmt.Sprintf("expected %d but got %d", http.StatusCreated, got))
@@ -260,7 +260,7 @@ func TestViewProject(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := makeRequest(t, http.MethodGet, viewProjectEndpoint+tt.queryString, defaultContentType, tt.token, bytes.NewReader([]byte{}))
+			r := makeRequest(t, http.MethodGet, projectsEndpoint+tt.queryString, defaultContentType, tt.token, bytes.NewReader([]byte{}))
 			defer r.Body.Close()
 			got := r.StatusCode
 			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d status code but got %d", tt.want, got))
@@ -286,7 +286,7 @@ func TestDeleteProject(t *testing.T) {
 	defer clearTestUser(t, signupManager.db)
 
 	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
-	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	r := makeRequest(t, http.MethodPost, projectsEndpoint, defaultContentType, token, requestBody)
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, fmt.Sprintf("expected %d but got %d", http.StatusCreated, got))
@@ -334,7 +334,7 @@ func TestDeleteProject(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			body := bytes.NewReader([]byte("")) // no body required, but need to provide a default
-			r := makeRequest(t, http.MethodDelete, deleteProjectEndpoint+tt.queryString, defaultContentType, tt.token, body)
+			r := makeRequest(t, http.MethodDelete, projectsEndpoint+tt.queryString, defaultContentType, tt.token, body)
 			defer r.Body.Close()
 
 			got := r.StatusCode
@@ -357,7 +357,7 @@ func TestUploadFile(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, statusCode, "Signup status code should be 201 when successful")
 
 	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
-	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	r := makeRequest(t, http.MethodPost, projectsEndpoint, defaultContentType, token, requestBody)
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, "expected 201 when creating a valid project")
@@ -424,7 +424,7 @@ func TestUploadFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := uploadOrUpdateTestFile(t, tt.token, tt.fileName, tt.projectName, uploadFilesEndpoint, tt.filePath)
+			r := uploadOrUpdateTestFile(t, tt.token, tt.fileName, tt.projectName, filesEndpoint, http.MethodPost, tt.filePath)
 			defer r.Body.Close()
 			got := r.StatusCode
 			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d on file upload, but got %d", tt.want, got))
@@ -446,13 +446,13 @@ func TestUpdateFile(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, statusCode, "Signup status code should be 201 when successful")
 
 	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
-	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	r := makeRequest(t, http.MethodPost, projectsEndpoint, defaultContentType, token, requestBody)
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, "expected 201 when creating a valid project")
 
 	// upload the file - later we will try to modify it
-	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", uploadFilesEndpoint, "/root/bar")
+	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", filesEndpoint, http.MethodPost, "/root/bar")
 	defer r.Body.Close()
 	got = r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, "Expected 201 when uploading a file")
@@ -511,7 +511,7 @@ func TestUpdateFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := uploadOrUpdateTestFile(t, tt.token, tt.fileName, tt.projectName, updateFilesEndpoint, "")
+			r := uploadOrUpdateTestFile(t, tt.token, tt.fileName, tt.projectName, filesEndpoint, http.MethodPut, "")
 			defer r.Body.Close()
 			got := r.StatusCode
 			assert.Equal(t, tt.want, got, fmt.Sprintf("expected %d from update file call, but got %d", tt.want, got))
@@ -534,13 +534,13 @@ func TestDownloadFile(t *testing.T) {
 
 	// create the project for the user
 	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
-	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	r := makeRequest(t, http.MethodPost, projectsEndpoint, defaultContentType, token, requestBody)
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, "expected 201 when creating a valid project")
 
 	// upload the file - later we will try to download it in different scenarios
-	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", uploadFilesEndpoint, "/root/bar")
+	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", filesEndpoint, http.MethodPost, "/root/bar")
 	defer r.Body.Close()
 	got = r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, "Expected 201 when uploading a file")
@@ -560,7 +560,7 @@ func TestDownloadFile(t *testing.T) {
 			token: token,
 			fileName: "foo.txt",
 			projectName: "foobar",
-			endpoint: downloadFilesEndpoint+"?name=%s&project_name=%s",
+			endpoint: filesEndpoint+"?name=%s&project_name=%s",
 			want: http.StatusOK,
 		},
 		{
@@ -568,7 +568,7 @@ func TestDownloadFile(t *testing.T) {
 			token: token,
 			fileName: "bar.txt",
 			projectName: "foobar",
-			endpoint: downloadFilesEndpoint+"?name=%s&project_name=%s",
+			endpoint: filesEndpoint+"?name=%s&project_name=%s",
 			want: http.StatusNotFound,
 		},
 		{
@@ -576,7 +576,7 @@ func TestDownloadFile(t *testing.T) {
 			token: token,
 			fileName: "foo.txt",
 			projectName: "barbaz",
-			endpoint: downloadFilesEndpoint+"?name=%s&project_name=%s",
+			endpoint: filesEndpoint+"?name=%s&project_name=%s",
 			want: http.StatusNotFound,
 		},
 		{
@@ -584,7 +584,7 @@ func TestDownloadFile(t *testing.T) {
 			token: token,
 			fileName: "foo.txt",
 			projectName: "",
-			endpoint: downloadFilesEndpoint+"?name=%s&%s",
+			endpoint: filesEndpoint+"?name=%s&%s",
 			want: http.StatusBadRequest,
 		},
 		{
@@ -592,7 +592,7 @@ func TestDownloadFile(t *testing.T) {
 			token: token+"foobar123",
 			fileName: "foo.txt",
 			projectName: "foobar",
-			endpoint: downloadFilesEndpoint+"?name=%s&project_name=%s",
+			endpoint: filesEndpoint+"?name=%s&project_name=%s",
 			want: http.StatusUnauthorized,
 		},
 		{
@@ -600,7 +600,7 @@ func TestDownloadFile(t *testing.T) {
 			token: "",
 			fileName: "foo.txt",
 			projectName: "foobar",
-			endpoint: downloadFilesEndpoint+"?name=%s&project_name=%s",
+			endpoint: filesEndpoint+"?name=%s&project_name=%s",
 			want: http.StatusUnauthorized,
 		},
 	}
@@ -646,13 +646,13 @@ func TestDeleteFile(t *testing.T) {
 
 	// create the project for the user
 	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
-	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	r := makeRequest(t, http.MethodPost, projectsEndpoint, defaultContentType, token, requestBody)
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, "expected 201 when creating a valid project")
 
 	// upload the file - later we will try to delete it in different scenarios
-	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", uploadFilesEndpoint, "/root/bar")
+	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", filesEndpoint, http.MethodPost, "/root/bar")
 	defer r.Body.Close()
 	got = r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, "Expected 201 when uploading a file")
@@ -728,7 +728,7 @@ func TestDeleteFile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			b := fmt.Sprintf(tt.body, tt.fileName, tt.filePath, tt.projectName)
 			body := bytes.NewReader([]byte(b))
-			r := makeRequest(t, http.MethodDelete, deleteFilesEndpoint, defaultContentType, tt.token, body)
+			r := makeRequest(t, http.MethodDelete, filesEndpoint, defaultContentType, tt.token, body)
 			defer r.Body.Close()
 
 			got := r.StatusCode
@@ -736,7 +736,7 @@ func TestDeleteFile(t *testing.T) {
 
 			if got == http.StatusNoContent {
 				queryString := "?project_name=foobar"
-				r := makeRequest(t, http.MethodGet, viewProjectEndpoint+queryString, defaultContentType, tt.token, bytes.NewReader([]byte{}))
+				r := makeRequest(t, http.MethodGet, projectsEndpoint+queryString, defaultContentType, tt.token, bytes.NewReader([]byte{}))
 				defer r.Body.Close()
 
 				b, err := io.ReadAll(r.Body)
@@ -763,13 +763,13 @@ func TestFileSharingByUser(t *testing.T) {
 
 	// create the project for the user
 	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
-	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	r := makeRequest(t, http.MethodPost, projectsEndpoint, defaultContentType, token, requestBody)
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, "expected 201 when creating a valid project")
 
 	// upload the file - later we will try to delete it in different scenarios
-	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", uploadFilesEndpoint, "/root/bar")
+	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", filesEndpoint, http.MethodPost, "/root/bar")
 	defer r.Body.Close()
 	got = r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, "Expected 201 when uploading a file")
@@ -880,13 +880,13 @@ func TestGettingSharedFile(t *testing.T) {
 
 	// create the project for the user
 	requestBody := bytes.NewReader([]byte(`{"username": "helloworld", "name": "foobar", "directories": {"root": {"files": [], "bar": {"files": []}}}}'}`))
-	r := makeRequest(t, http.MethodPost, createProjectEndpoint, defaultContentType, token, requestBody)
+	r := makeRequest(t, http.MethodPost, projectsEndpoint, defaultContentType, token, requestBody)
 	defer r.Body.Close()
 	got := r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, "expected 201 when creating a valid project")
 
 	// upload the file - next we will share it and later try to get the shared file in different scenarios
-	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", uploadFilesEndpoint, "/root/bar")
+	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", filesEndpoint, http.MethodPost, "/root/bar")
 	defer r.Body.Close()
 	got = r.StatusCode
 	assert.Equal(t, http.StatusCreated, got, "Expected 201 when uploading a file")
@@ -917,7 +917,7 @@ func TestGettingSharedFile(t *testing.T) {
 
 	// change file - this will generate a different hash
 	_ = writeFileForTesting(t, "Some more new data.")
-	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", updateFilesEndpoint, "/root/bar")
+	r = uploadOrUpdateTestFile(t, token, "foo.txt", "foobar", filesEndpoint, http.MethodPut, "/root/bar")
 	defer r.Body.Close()
 
 	// try to get the shared file again - this should not succeed and should result in 410 Gone

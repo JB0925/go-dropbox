@@ -23,13 +23,15 @@ const (
 	baseUrl               = "http://localhost:8080"
 	signupEndpoint        = "/signup"
 	loginEndpoint         = "/login"
-	createProjectEndpoint = "/projects/create"
-	viewProjectEndpoint   = "/projects/view"
-	deleteProjectEndpoint = "/projects/delete"
-	uploadFilesEndpoint   = "/files/upload"
-	updateFilesEndpoint   = "/files/update"
-	downloadFilesEndpoint = "/files/download"
-	deleteFilesEndpoint   = "/files/delete"
+	projectsEndpoint      = "/projects"
+	filesEndpoint         = "/files"
+	// createProjectEndpoint = "/projects/create"
+	// viewProjectEndpoint   = "/projects/view"
+	// deleteProjectEndpoint = "/projects/delete"
+	// uploadFilesEndpoint   = "/files/upload"
+	// updateFilesEndpoint   = "/files/update"
+	// downloadFilesEndpoint = "/files/download"
+	// deleteFilesEndpoint   = "/files/delete"
 	sharingFilesEndpoint  = "/files/sharing"
 	sharedFilesEndpoint   = "/files/shared"
 	defaultContentType    = "application/json"
@@ -195,6 +197,7 @@ func uploadOrUpdateTestFile(
 	name,
 	projectName,
 	endpoint,
+	method,
 	path string,
 ) *http.Response {
 	var body bytes.Buffer
@@ -223,10 +226,6 @@ func uploadOrUpdateTestFile(
 	// Close the writer to finalize the form data
 	writer.Close()
 
-	method := http.MethodPost
-	if endpoint == updateFilesEndpoint {
-		method = http.MethodPut
-	}
 	return makeRequest(t, method, endpoint, writer.FormDataContentType(), token, &body)
 }
 
