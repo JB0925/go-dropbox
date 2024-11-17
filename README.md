@@ -54,6 +54,7 @@ curl -kv -X POST "http://localhost:8080/projects" -H 'content-type: application/
 
 ## Delete a Project
 ```
+- Note that the string after `"/projects/"` is a path variable representing the name of the project.
 curl -kv -X DELETE http://localhost:8080/projects/foor -H 'content-type: application/json' -H 'Authorization: '
 ```
 
