@@ -59,18 +59,18 @@ func NewServer() *http.Server {
 		rateLimiter.MaxRequests = parseMaxRequests(maxRequests) // make this change for testing
 	}
 	m := mux.NewRouter()
-	m.Use(rateLimiter.RateLimit)
-	
-	m.HandleFunc("/signup", http.HandlerFunc(signupUser))
-	m.HandleFunc("/login", http.HandlerFunc(loginUser))
-	m.HandleFunc("/projects/create", checkAuth(http.HandlerFunc(createProject)))
-	m.HandleFunc("/projects/view", checkAuth(http.HandlerFunc(viewProject)))
-	m.HandleFunc("/projects/delete", checkAuth(http.HandlerFunc(deleteProject)))
-	m.HandleFunc("/files/upload", checkAuth(http.HandlerFunc(uploadFile)))
-	m.HandleFunc("/files/update", checkAuth(http.HandlerFunc(updateFile)))
-	m.HandleFunc("/files/download", checkAuth(http.HandlerFunc(downloadFile)))
-	m.HandleFunc("/files/delete", checkAuth(http.HandlerFunc(deleteFile)))
-	m.HandleFunc("/files/sharing", checkAuth(http.HandlerFunc(shareFile)))
+	m.Use(rateLimiter.RateLimit, checkAuth)
+
+	m.HandleFunc("/signup", http.HandlerFunc(signupUser)).Methods(http.MethodPost)
+	m.HandleFunc("/login", http.HandlerFunc(loginUser)).Methods(http.MethodPost)
+	m.HandleFunc("/projects/create", http.HandlerFunc(createProject))
+	m.HandleFunc("/projects/view", http.HandlerFunc(viewProject))
+	m.HandleFunc("/projects/delete", http.HandlerFunc(deleteProject))
+	m.HandleFunc("/files/upload", http.HandlerFunc(uploadFile))
+	m.HandleFunc("/files/update", http.HandlerFunc(updateFile))
+	m.HandleFunc("/files/download", http.HandlerFunc(downloadFile))
+	m.HandleFunc("/files/delete", http.HandlerFunc(deleteFile))
+	m.HandleFunc("/files/sharing", http.HandlerFunc(shareFile))
 	m.HandleFunc("/files/shared", http.HandlerFunc(getSharedFile))
 
 	return &http.Server{

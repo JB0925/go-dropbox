@@ -103,13 +103,13 @@ func verifyToken(tk string) (bool, string, string) {
 	return false, "", ""
 }
 
-func checkAuth(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func checkAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if slices.Contains(loginExcludedPaths, r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}
-		
+
 		auth := r.Header.Get("Authorization")
 		validToken, username, userId := verifyToken(auth)
 		if auth == "" || !validToken {
@@ -122,7 +122,7 @@ func checkAuth(next http.HandlerFunc) http.HandlerFunc {
 		r.Header.Set("X-GO-DROPBOX-USER", username)
 		r.Header.Set("X-GO-DROPBOX-USER-ID", userId)
 		next.ServeHTTP(w, r)
-	}
+	})
 }
 
 func getErrorCode(err error) int {
