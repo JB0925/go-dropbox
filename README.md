@@ -36,7 +36,7 @@ curl -kv -X POST http://localhost:8080/login -H 'content-type: application/json'
 ## Helpful Tip Re: Auth Tokens in the CLI
 When you login to go-dropbox, it will write a JWT token to your home directory. This is the same token that is returned to you via /login. Instead of hunting down this token in your terminal, or copy and pasting from that file each time, you can do something like this:
 ```
-curl -kv "http://localhost:8080/projects/view?project_name=foo" -H 'content-type: application/json' -H "Authorization: $(cat ~/go-dropbox-token-<your-username>.txt)" | jq -r '.project' | jq
+curl -kv "http://localhost:8080/projects?project_name=foo" -H 'content-type: application/json' -H "Authorization: $(cat ~/go-dropbox-token-<your-username>.txt)" | jq -r '.project' | jq
 ```
 
 That will use shell expansion to substitute your actual JWT token into the space where `$(cat ~/go-dropbox-token-username.txt)` resides.
@@ -47,14 +47,14 @@ That will use shell expansion to substitute your actual JWT token into the space
 ## Create a Project
 Please note that the `"directories"` key in the payload below is optional - leaving it out will create a basic setup that looks like `{"root": {"files": []}}`.
 ```
-curl -kv -X POST "http://localhost:8080/projects/create" -H 'content-type: application/json' -H 'Authorization: ' -d '{"username": "jesseb", "name": "foo", "directories": {"root": {"files": [], "bar": {"files": []}}}}'
+curl -kv -X POST "http://localhost:8080/projects" -H 'content-type: application/json' -H 'Authorization: ' -d '{"username": "jesseb", "name": "foo", "directories": {"root": {"files": [], "bar": {"files": []}}}}'
 ```
 
 # Note - Deleting a project also deletes all of the files associated with it.
 
 ## Delete a Project
 ```
-curl -kv -X DELETE http://localhost:8080/projects/delete?project_name=foor -H 'content-type: application/json' -H 'Authorization: '
+curl -kv -X DELETE http://localhost:8080/projects/foor -H 'content-type: application/json' -H 'Authorization: '
 ```
 
 ## Upload a File
@@ -62,7 +62,7 @@ curl -kv -X DELETE http://localhost:8080/projects/delete?project_name=foor -H 'c
 - content-type is multipart/form-data
 - can create a new filepath by passing in what you want the filepath to be
 ```
-curl -kv -X POST http://localhost:8080/files/upload -H 'content-type: multipart/form-data' -H 'Authorization: ' -F 'name=YESLogo2.png' -F 'project_name=foo' -F 'path=/root/bar' -F 'file=@/Users/jessebrink/curbside/src/YESLogo2.png'
+curl -kv -X POST http://localhost:8080/files -H 'content-type: multipart/form-data' -H 'Authorization: ' -F 'name=YESLogo2.png' -F 'project_name=foo' -F 'path=/root/bar' -F 'file=@/Users/jessebrink/curbside/src/YESLogo2.png'
 ```
 
 ## Download a File
@@ -72,17 +72,17 @@ curl -kv -X GET "http://localhost:8080/files/download?name=YESLogo2.png&project_
 
 ## View a Project
 ```
-curl -kv -X GET "http://localhost:8080/projects/view?project_name=foo" -H 'content-type: application/json' -H 'Authorization: ' | jq -r '.project' | jq
+curl -kv -X GET "http://localhost:8080/projects?project_name=foo" -H 'content-type: application/json' -H 'Authorization: ' | jq -r '.project' | jq
 ```
 
 ## Delete a File
 ```
-curl -kv -X DELETE http://localhost:8080/files/delete -H 'Authorization: ' -d '{"name": "login.go", "path": "/root/foo/baz", "project_name": "foo"}'
+curl -kv -X DELETE http://localhost:8080/files -H 'Authorization: ' -d '{"name": "login.go", "path": "/root/foo/baz", "project_name": "foo"}'
 ```
 
 ## Update a File
 ```
- curl -kv -X PUT http://localhost:8080/files/update -H 'content-type: multipart/form-data' -H "Authorization: $(< ~/go-dropbox-token-jesseb.txt)" -F 'name=login.go' -F 'project_name=hello' -F 'file=@login.go'
+ curl -kv -X PUT http://localhost:8080/files -H 'content-type: multipart/form-data' -H "Authorization: $(< ~/go-dropbox-token-jesseb.txt)" -F 'name=login.go' -F 'project_name=hello' -F 'file=@login.go'
 ```
 
 ## Sharing a File

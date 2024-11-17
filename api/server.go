@@ -65,7 +65,7 @@ func NewServer() *http.Server {
 	m.HandleFunc("/login", http.HandlerFunc(loginUser)).Methods(http.MethodPost)
 	m.HandleFunc("/projects", http.HandlerFunc(createProject)).Methods(http.MethodPost)
 	m.HandleFunc("/projects", http.HandlerFunc(viewProject)).Methods(http.MethodGet)
-	m.HandleFunc("/projects", http.HandlerFunc(deleteProject)).Methods(http.MethodDelete)
+	m.HandleFunc("/projects/{project_name}", http.HandlerFunc(deleteProject)).Methods(http.MethodDelete)
 	m.HandleFunc("/files", http.HandlerFunc(uploadFile)).Methods(http.MethodPost)
 	m.HandleFunc("/files", http.HandlerFunc(updateFile)).Methods(http.MethodPut)
 	m.HandleFunc("/files", http.HandlerFunc(downloadFile)).Methods(http.MethodGet)
@@ -430,7 +430,8 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 func deleteProject(w http.ResponseWriter, r *http.Request) {
 	// It is important to note that when a project is deleted, all the files and directories
 	// associated with the project are also deleted.
-	projectName := r.URL.Query().Get("project_name")
+	vars := mux.Vars(r)
+	projectName := vars["project_name"]
 	if projectName == "" {
 		message := fmt.Sprintf("server.go::deleteProject - Missing required field: projectName = %s", projectName)
 		log.Default().Println(message)

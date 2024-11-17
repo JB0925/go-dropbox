@@ -293,7 +293,7 @@ func TestDeleteProject(t *testing.T) {
 
 	type args struct {
 		name        string
-		queryString string
+		path string
 		token       string
 		want        int // http status code
 	}
@@ -301,40 +301,52 @@ func TestDeleteProject(t *testing.T) {
 	tests := []args{
 		{
 			name:        "Test should return 204 when deleting a project that belongs to the user",
-			queryString: "?project_name=foobar",
+			path:        "/foobar",
 			token:       token,
 			want:        http.StatusNoContent,
 		},
 		{
 			name:        "Test should return 404 when deleting a project that no longer exists",
-			queryString: "?project_name=foobar",
+			path:        "/foobar",
 			token:       token,
 			want:        http.StatusNotFound,
 		},
 		{
 			name:        "Test should return 401 when token is malformed.",
-			queryString: "?project_name=bar",
+			path:        "/bar",
 			token:       token + "foobar123",
 			want:        http.StatusUnauthorized,
 		},
 		{
 			name:        "Test should return 401 when token is missing",
-			queryString: "?project_name=baz",
+			path:        "/baz",
 			token:       "",
 			want:        http.StatusUnauthorized,
 		},
 		{
-			name:        "Test should return 400 when request params are invalid",
-			queryString: "?foo=bar",
+			name:        "Test should return 404 when no param is given",
+			path:        "/",
 			token:       token,
-			want:        http.StatusBadRequest,
+			want:        http.StatusNotFound,
+		},
+		{
+			name:        "Test should return 404 when the project is not found",
+			path:        "/baz",
+			token:       token,
+			want:        http.StatusNotFound,
+		},
+		{
+			name:        "Test should return 405 when route variable is left out",
+			path:        "",
+			token:       token,
+			want:        http.StatusMethodNotAllowed,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			body := bytes.NewReader([]byte("")) // no body required, but need to provide a default
-			r := makeRequest(t, http.MethodDelete, projectsEndpoint+tt.queryString, defaultContentType, tt.token, body)
+			r := makeRequest(t, http.MethodDelete, projectsEndpoint+tt.path, defaultContentType, tt.token, body)
 			defer r.Body.Close()
 
 			got := r.StatusCode
