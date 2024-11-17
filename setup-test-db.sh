@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS files (
     id            SERIAL PRIMARY KEY,
     name          VARCHAR(20),
     path          VARCHAR(150),
-    project_name  VARCHAR(100),
     data          BYTEA NOT NULL,
     user_id       INTEGER NOT NULL,
     project_id    INTEGER NOT NULL,
@@ -43,8 +42,6 @@ CREATE TABLE IF NOT EXISTS shared (
     hash          VARCHAR(100) NOT NULL,
     user_id       INTEGER NOT NULL,
     project_id    INTEGER NOT NULL,
-    file_name     VARCHAR(20) NOT NULL,
-    project_name  VARCHAR(100) NOT NULL,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

@@ -23,5 +23,15 @@ const updateProjectDirectoryQuery = `UPDATE projects SET directories = $1, mtime
 const viewProjectQuery = `SELECT directories FROM projects WHERE project_name = $1 and user_id = $2`
 const deleteFileQuery = `DELETE FROM files USING projects WHERE files.project_id = projects.id AND files.name = $1 AND projects.project_name = $2 AND files.user_id = $3 AND files.project_id = $4 AND files.path = $5`
 const deleteProjectQuery = `DELETE FROM projects WHERE project_name = $1 AND user_id = $2`
-const createSharedFileQuery = `INSERT INTO shared (hash, user_id, project_id, file_name, project_name) VALUES ($1, $2, $3, $4, $5)`
-const getSharedFileDetailsQuery = `SELECT file_name, project_name FROM shared WHERE hash = $1`
+const createSharedFileQuery = `INSERT INTO shared (hash, user_id, project_id) VALUES ($1, $2, $3)`
+const getSharedFileDetailsQuery = `SELECT
+files.name AS file_name,
+projects.project_name
+FROM
+shared
+JOIN
+files ON shared.project_id = files.project_id AND shared.user_id = files.user_id
+JOIN
+projects ON shared.project_id = projects.id
+WHERE
+shared.hash = $1`
