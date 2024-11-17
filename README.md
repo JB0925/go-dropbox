@@ -68,7 +68,7 @@ curl -kv -X POST http://localhost:8080/files -H 'content-type: multipart/form-da
 
 ## Download a File
 ```
-curl -kv -X GET "http://localhost:8080/files/download?name=YESLogo2.png&project_name=foo" -H 'Authorization: ' -o YESLogo2.png
+curl -kv -X GET "http://localhost:8080/files?name=YESLogo2.png&project_name=foo" -H 'Authorization: ' -o YESLogo2.png
 ```
 
 ## View a Project
