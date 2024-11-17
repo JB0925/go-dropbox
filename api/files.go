@@ -252,6 +252,17 @@ func (fm *FileManager) parseDirectories(directories []byte) (map[string]interfac
 }
 
 func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, filePath, fileName string) error {
+	// findAndInsertPath takes a map[string]interface{}, a filePath, and a fileName
+	// The function finds <filePath> within <directories> ( or creates it if it does not exist )
+	// It then adds <fileName> into the files array in that directory.
+	//
+	// @param directories - map[string]interface{}: a nested map of directories
+	//     Ex: {"root": {"files": [], "bar": {"files": []}}}}'}
+	//         - bar is a nested directory within the root of the project
+	//
+	// @param filePath - string: the file path at which to insert the new file name
+	// @param fileName - string: the new file name to insert
+	// @return error - error: An error if one occurred, nil otherwise
 	segments := strings.Split(strings.Trim(filePath, "/"), "/")
 	if segments[0] != "root" {
 		return ErrInvalidPath
@@ -284,6 +295,13 @@ func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, fil
 }
 
 func (fm *FileManager) updateProjectStructure(
+	// This function marshals the updated directory structure
+	// and updates it in the database.
+	//
+	// @param projectId - int: the id of the project
+	// @param directories - map[string]interface{} - the directories that make up the project
+	// @param timestamp - int64: a Unix timestamp that represents when the project was updated
+	// @return error - error: An error if one occurred, nil otherwise
 	projectId int,
 	directories map[string]interface{},
 	timestamp int64) error {
@@ -362,6 +380,12 @@ func (fm *FileManager) storeFile(
 }
 
 func (fm *FileManager) findAndDeleteFileFromDirectories(
+	// Finds the file within the directory structure and deletes it.
+	//
+	// @param fileName - string: the name of the file
+	// @param filePath - string: the path from which to delete the file
+	// @param directories - map[string]interface{}: the directories that represent the project structure
+	// @return error - error: An error if one occurred, nil otherwise
 	fileName,
 	filePath string,
 	directories map[string]interface{}) error {
@@ -494,6 +518,11 @@ func (fm *FileManager) update(
 	// This function updates a file in the database
 	// and returns an error if the file does not exist or
 	// if there was an error updating the file.
+	//
+	// @param fd - FileData: a struct that contains the file name, path, and project name
+	// @param fileContent - []byte: A byte array containing the contents of the updated file
+	// @param userId - int: an integer representing the user ID
+	// @return error = error: An error if one occurred, nil otherwise
 	projectId, _, err := fm.getProjectIdAndDirectories(fd.ProjectName, userId)
 	if err != nil {
 		msg := fmt.Errorf("files.go::update - Error getting project id with project name %s. Error: %w", fd.ProjectName, err)
@@ -524,6 +553,12 @@ func (fm *FileManager) update(
 }
 
 func (fm *FileManager) createHashFromContent(fileContent []byte) (string, error) {
+	// This function takes in the content of a file and hashes the bytes.
+	// This is used later to tell if the file changed, which means it should not be shared.
+	//
+	// @param fileContent - byte[]: A byte array containing the contents of the updated file
+	// @return string: A string representing the hash of the file's contents
+	// @return error: An error if one occurred, nil otherwise
 	h := sha256.New()
 	if _, err := h.Write(fileContent); err != nil {
 		return "", err
@@ -533,6 +568,11 @@ func (fm *FileManager) createHashFromContent(fileContent []byte) (string, error)
 }
 
 func (fm *FileManager) storeFileHashForSharing(sd SharingData) (string, error) {
+	// After the file's content is hashed, this function stores the hash in the shared table
+	// 
+	// @param sd - SharingData: A struct containing the file name, project name, user ID, and project ID
+	// @return string: The hash that was stored.
+	// @return error: An error if one occurred, nil otherwise.
 	var uid int
 	var fileData []byte
 	if err := fm.db.QueryRow(getFileQuery, sd.Name, sd.ProjectName).Scan(&fileData, &uid); err != nil {
@@ -557,6 +597,14 @@ func (fm *FileManager) storeFileHashForSharing(sd SharingData) (string, error) {
 }
 
 func (fm *FileManager) shareFile(userGivenHash, userName string) (string, []byte, error) {
+	// This function is used to check if a file hash exists in the "shared" table and, 
+	// if so, downloads it for the user who wants it.
+	//
+	// @param userGivenHash - string: The hash supplied by the user that wants the shared file.
+	// @param userName - string: The name of the user who shared the file.
+	// @return string: the name of the file
+	// @return []byte: the contents of the file with the given file name
+	// @return error: An error if one occurred, nil otherwise
 	var projectName string
 	var fileName string
 
