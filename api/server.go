@@ -63,15 +63,15 @@ func NewServer() *http.Server {
 
 	m.HandleFunc("/signup", http.HandlerFunc(signupUser)).Methods(http.MethodPost)
 	m.HandleFunc("/login", http.HandlerFunc(loginUser)).Methods(http.MethodPost)
-	m.HandleFunc("/projects/create", http.HandlerFunc(createProject))
-	m.HandleFunc("/projects/view", http.HandlerFunc(viewProject))
-	m.HandleFunc("/projects/delete", http.HandlerFunc(deleteProject))
-	m.HandleFunc("/files/upload", http.HandlerFunc(uploadFile))
-	m.HandleFunc("/files/update", http.HandlerFunc(updateFile))
-	m.HandleFunc("/files/download", http.HandlerFunc(downloadFile))
-	m.HandleFunc("/files/delete", http.HandlerFunc(deleteFile))
-	m.HandleFunc("/files/sharing", http.HandlerFunc(shareFile))
-	m.HandleFunc("/files/shared", http.HandlerFunc(getSharedFile))
+	m.HandleFunc("/projects/create", http.HandlerFunc(createProject)).Methods(http.MethodPost)
+	m.HandleFunc("/projects/view", http.HandlerFunc(viewProject)).Methods(http.MethodGet)
+	m.HandleFunc("/projects/delete", http.HandlerFunc(deleteProject)).Methods(http.MethodDelete)
+	m.HandleFunc("/files/upload", http.HandlerFunc(uploadFile)).Methods(http.MethodPost)
+	m.HandleFunc("/files/update", http.HandlerFunc(updateFile)).Methods(http.MethodPut)
+	m.HandleFunc("/files/download", http.HandlerFunc(downloadFile)).Methods(http.MethodGet)
+	m.HandleFunc("/files/delete", http.HandlerFunc(deleteFile)).Methods(http.MethodDelete)
+	m.HandleFunc("/files/sharing", http.HandlerFunc(shareFile)).Methods(http.MethodPost)
+	m.HandleFunc("/files/shared", http.HandlerFunc(getSharedFile)).Methods(http.MethodGet)
 
 	return &http.Server{
 		Handler: m,

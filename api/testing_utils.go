@@ -223,7 +223,11 @@ func uploadOrUpdateTestFile(
 	// Close the writer to finalize the form data
 	writer.Close()
 
-	return makeRequest(t, http.MethodPost, endpoint, writer.FormDataContentType(), token, &body)
+	method := http.MethodPost
+	if endpoint == updateFilesEndpoint {
+		method = http.MethodPut
+	}
+	return makeRequest(t, method, endpoint, writer.FormDataContentType(), token, &body)
 }
 
 // Method used in testing to get the id of the current project. The id column is 
