@@ -13,7 +13,7 @@ const checkProjectExistsQuery = `SELECT id FROM projects WHERE project_name = $1
 const uploadFileQuery = `INSERT INTO files (name, path, data, user_id, project_id, created_at, mtime) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 const updateFileQuery = `UPDATE files SET data = $1, mtime = $2 WHERE name = $3 AND project_id = $4 AND user_id = $5`
 const getProjectIdQuery = `SELECT id, directories FROM projects WHERE project_name = $1 AND user_id = $2`
-const checkFileExistsQuery = `SELECT id FROM files WHERE project_id = $1 AND user_id = $2 AND name = $3`
+const checkFileExistsQuery = `SELECT id FROM files WHERE project_id = $1 AND user_id = $2 AND name = $3 and path = $4`
 
 //lint:ignore U1000 Ignore unused SQL query during lint check
 const getFilesQuery = `SELECT id FROM files WHERE project_id = $1 AND user_id = $2`

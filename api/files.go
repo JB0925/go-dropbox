@@ -52,7 +52,7 @@ func (fm FileManager) upload(fd FileData, username string, fileContent []byte) e
 		return err
 	}
 
-	exists, err := fm.doesFileExist(projectId, userId, fd.Name)
+	exists, err := fm.doesFileExist(projectId, userId, fd.Name, fd.Path)
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func (fm *FileManager) getUserId(username string) (int, error) {
 	return userId, nil
 }
 
-func (fm *FileManager) doesFileExist(project_id, user_id int, fileName string) (bool, error) {
+func (fm *FileManager) doesFileExist(project_id, user_id int, fileName, filePath string) (bool, error) {
 	// This function checks the database for the file
 	// and return true if the file exists
 	// and false if the file does not exist.
@@ -199,7 +199,7 @@ func (fm *FileManager) doesFileExist(project_id, user_id int, fileName string) (
 	// @param: user_id int - the user id of the file
 	// @return: bool - true if the file exists, false if it does not
 	// @return: error - An error if one exists
-	rows, err := fm.db.Query(checkFileExistsQuery, project_id, user_id, fileName)
+	rows, err := fm.db.Query(checkFileExistsQuery, project_id, user_id, fileName, filePath)
 	if err != nil {
 		message := fmt.Sprintf("files.go::doesFileExist - Error querying database: %v", err)
 		log.Default().Println(message)
@@ -530,7 +530,7 @@ func (fm *FileManager) update(
 		return err
 	}
 
-	exists, err := fm.doesFileExist(projectId, userId, fd.Name)
+	exists, err := fm.doesFileExist(projectId, userId, fd.Name, fd.Path)
 	if err != nil {
 		log.Default().Println("files.go::update - Error checking if file exists: ", err)
 		return err

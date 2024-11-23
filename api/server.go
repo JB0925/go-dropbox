@@ -381,6 +381,7 @@ func updateFile(w http.ResponseWriter, r *http.Request) {
 	fd := FileData{
 		Name:        name,
 		ProjectName: projectName,
+		Path: path,
 	}
 
 	if err = fileManager.update(fd, fc, userId); err != nil {
