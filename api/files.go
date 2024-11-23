@@ -62,7 +62,6 @@ func (fm FileManager) upload(fd FileData, username string, fileContent []byte) e
 		return ErrorFileAlreadyExists
 	}
 
-	// TODO: Refactor to include the placing of the file in a new/existing directory
 	directories, err := fm.parseDirectories(dirs)
 	if err != nil {
 		message := fmt.Sprintf("files.go::upload - Error parsing directories: %v", err)
