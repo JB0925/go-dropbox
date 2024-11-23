@@ -393,6 +393,14 @@ func TestUploadFile(t *testing.T) {
 			want:        http.StatusCreated,
 		},
 		{
+			name:        "Test should return 201 with valid user, existing project, and same file name but different path",
+			token:       token,
+			fileName:    "foo.txt",
+			projectName: "foobar",
+			filePath:    "/root",
+			want:        http.StatusCreated,
+		},
+		{
 			name:        "Test should return 400 when the path is not valid ( doesn't start with /root )",
 			token:       token,
 			fileName:    "bar.txt",
