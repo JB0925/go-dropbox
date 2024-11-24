@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"slices"
@@ -16,6 +17,7 @@ import (
 
 var (
 	loginExcludedPaths = []string{"/login", "/signup", "/files/shared"}
+	localAddrs         = []string{"127.0.0.1", "::1"}
 )
 
 type JwtClaims struct {
@@ -188,4 +190,18 @@ func parseMaxRequests(maxRequests string) int {
 	}
 
 	return mr
+}
+
+// isLocalRequest checks to see if a request is from localhost
+// if so, this means it can take advantage of "writeTokenToFile"
+// for convenience.
+//
+// @param: r - a pointer to an HTTP request
+// @return: bool - true if the request is local, false otherwise
+func isLocalRequest(r *http.Request) bool {
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		log.Default().Printf("could not parse remote address: %s", r.RemoteAddr)
+	}
+	return slices.Contains(localAddrs, ip)
 }
