@@ -38,3 +38,23 @@ func NewRedisClient() *RedisClient {
 		redisClient: redisClient,
 	}
 }
+
+// checks to see if the file data is in the Redis cache and, if so, returns it
+//
+// @param: cachedFileName - a string representing the cached file name,
+//  which will be the project_name and file_name concatenated together.
+//  this is done to ensure that the correct file from the correct project is returned.
+// @return []byte - the file data, or nil if it is not in the cache
+func (rc *RedisClient) getFileFromRedisCache(cachedFileName string) []byte {
+	d, err := rc.redisClient.Get(ctx, cachedFileName).Result()
+	if err != nil {
+		log.Default().Printf("files.go::upload - redis error on get %s: %v", cachedFileName, err)
+	}
+
+	if d != "" {
+		log.Default().Printf("files.go::upload - found %s in redis cache with len %d", cachedFileName, len([]byte(d)))
+		return []byte(d)
+	}
+
+	return nil
+}

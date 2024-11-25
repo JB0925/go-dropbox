@@ -31,7 +31,7 @@ type (
 )
 
 var (
-	fileSharingUserId = 1
+	fileSharingUserId = -1  // shared files will never be cached and require no auth
 )
 
 func NewFileManager(dbUrl string) *FileManager {
@@ -110,14 +110,9 @@ func (fm FileManager) download(projectName, fileName string, userId int) ([]byte
 	// @return: error - An error if one exists
 	cachedFileName := projectName+":"+fileName
 	if userId != fileSharingUserId {
-		d, err := redisClient.redisClient.Get(ctx, cachedFileName).Result()
-		if err != nil {
-			log.Default().Printf("files.go::upload - redis error on get %s: %v", cachedFileName, err)
-		}
-
-		if d != "" {
-			log.Default().Printf("files.go::upload - found %s in redis cache with len %d", cachedFileName, len([]byte(d)))
-			return []byte(d), nil
+		// check to see if file is cached and, if so, skip everything below
+		if data := redisClient.getFileFromRedisCache(cachedFileName); data != nil {
+			return data, nil
 		}
 	}
 
