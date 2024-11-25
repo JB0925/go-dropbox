@@ -31,6 +31,7 @@ func init() {
 
 	dbName = os.Getenv("DATABASE_URL")
 	maxRequests = os.Getenv("MAX_REQUESTS")
+	redisClient = NewRedisClient()
 	loginManager = NewLoginManager(dbName)
 	signupManager = NewSignupManager(dbName)
 	projectManager = NewProjectManager(dbName)
@@ -44,6 +45,7 @@ var (
 	signupManager           *SignupManager
 	projectManager          *ProjectManager
 	fileManager             *FileManager
+	redisClient             *RedisClient
 	ErrProjectAlreadyExists = errors.New("project already exists")
 	rateLimiter             = rate_limiter.NewRateLimiter(5, 30*time.Second, 2)
 )
@@ -315,8 +317,15 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 	message := fmt.Sprintf("server.go::downloadFile - Getting file %s from project %s", fileName, projectName)
 	log.Default().Println(message)
 
-	userName := r.Header.Get("X-GO-DROPBOX-USER")
-	file, err := fileManager.download(projectName, fileName, userName)
+	userId := r.Header.Get("X-GO-DROPBOX-USER-ID")
+	intUserId, err := strconv.Atoi(userId)
+	if err != nil {
+		log.Default().Printf("server.go::downloadFile - could not convert user id %s to int. Err: %v", userId, err)
+		http.Error(w, "INTERNAL SERVER ERROR", getErrorCode(err))
+		return
+	}
+
+	file, err := fileManager.download(projectName, fileName, intUserId)
 	if err != nil {
 		message := fmt.Sprintf("server.go::downloadFile - Error getting file: %v", err)
 		log.Default().Println(message)
@@ -512,7 +521,7 @@ func getSharedFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileName, fileData, err := fileManager.shareFile(contentHash, sharerUserName)
+	fileName, fileData, err := fileManager.shareFile(contentHash)
 	if err != nil {
 		message := fmt.Errorf("server.go::getSharedFile - Error when getting shared file: %w", err)
 		log.Default().Println(message)

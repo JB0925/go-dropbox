@@ -954,5 +954,5 @@ func TestGettingSharedFile(t *testing.T) {
 	r, err = c.Do(req)
 	assert.Nil(t, err)
 	defer r.Body.Close()
-	assert.Equal(t, http.StatusGone, r.StatusCode, fmt.Sprintf("expected %d when getting shared file, but got %d", http.StatusOK, r.StatusCode))	
+	assert.Equal(t, http.StatusGone, r.StatusCode, fmt.Sprintf("expected %d when getting shared file, but got %d", http.StatusGone, r.StatusCode))
 }

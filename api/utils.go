@@ -36,6 +36,10 @@ func newDb(dbUrl string) *sql.DB {
 		log.Fatal("utils::newDb - Error opening database connection: ", err)
 	}
 
+	db.SetMaxOpenConns(10)                // Max open connections
+	db.SetMaxIdleConns(5)                 // Max idle connections
+	db.SetConnMaxLifetime(30 * time.Minute)
+
 	err = db.Ping()
 	if err != nil {
 		log.Fatal("utils::newDb - Error pinging database: ", err)

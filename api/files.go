@@ -30,6 +30,10 @@ type (
 	}
 )
 
+var (
+	fileSharingUserId = 1
+)
+
 func NewFileManager(dbUrl string) *FileManager {
 	db := newDb(dbUrl)
 	message := fmt.Sprintf("files.go::NewFileManager - New FileManager created with db: %v", dbUrl)
@@ -96,7 +100,7 @@ func (fm FileManager) upload(fd FileData, username string, fileContent []byte) e
 	return nil
 }
 
-func (fm FileManager) download(projectName, fileName, userName string) ([]byte, error) {
+func (fm FileManager) download(projectName, fileName string, userId int) ([]byte, error) {
 	// This function gets the file content from the database
 	// and returns an error if the file does not exist.
 	//
@@ -104,6 +108,19 @@ func (fm FileManager) download(projectName, fileName, userName string) ([]byte, 
 	// @param: fileName string - the name of the file
 	// @return: []byte - the content of the file
 	// @return: error - An error if one exists
+	cachedFileName := projectName+":"+fileName
+	if userId != fileSharingUserId {
+		d, err := redisClient.redisClient.Get(ctx, cachedFileName).Result()
+		if err != nil {
+			log.Default().Printf("files.go::upload - redis error on get %s: %v", cachedFileName, err)
+		}
+
+		if d != "" {
+			log.Default().Printf("files.go::upload - found %s in redis cache with len %d", cachedFileName, len([]byte(d)))
+			return []byte(d), nil
+		}
+	}
+
 	var data []byte
 	var fileUserId int
 	err := fm.db.QueryRow(getFileQuery, fileName, projectName).Scan(&data, &fileUserId)
@@ -120,19 +137,18 @@ func (fm FileManager) download(projectName, fileName, userName string) ([]byte, 
 		return nil, ErrFileDoesNotExist
 	}
 
-	userId, err := fm.getUserId(userName)
-	if err != nil {
-		message := fmt.Sprintf("files.go::get - Error getting user id: %v", err)
-		log.Default().Println(message)
-		return nil, err
-	}
-
-	if fileUserId != userId {
+	if userId != fileSharingUserId && fileUserId != userId {
 		message := fmt.Sprintf("files.go::get - User with id %d does not have access file %s", userId, fileName)
 		log.Default().Println(message)
 		return nil, ErrUnauthorized
 	}
 
+	if userId != fileSharingUserId {
+		err = redisClient.redisClient.Set(ctx, cachedFileName, data, time.Duration(24 * time.Hour)).Err()
+		if err != nil {
+			log.Default().Printf("files.go::upload - redis error on set %s: %v", cachedFileName, err)
+		}
+	}
 	return data, nil
 }
 
@@ -595,7 +611,7 @@ func (fm *FileManager) storeFileHashForSharing(sd SharingData) (string, error) {
 	return hash, nil
 }
 
-func (fm *FileManager) shareFile(userGivenHash, userName string) (string, []byte, error) {
+func (fm *FileManager) shareFile(userGivenHash string) (string, []byte, error) {
 	// This function is used to check if a file hash exists in the "shared" table and, 
 	// if so, downloads it for the user who wants it.
 	//
@@ -620,7 +636,7 @@ func (fm *FileManager) shareFile(userGivenHash, userName string) (string, []byte
 
 	// at this point, we've determined that this file exists as expected,
 	// so now we can call "download" to return it to the user.
-	fileData, err := fm.download(projectName, fileName, userName)
+	fileData, err := fm.download(projectName, fileName, fileSharingUserId)
 	if err != nil {
 		return "", []byte{}, fmt.Errorf("could not download file %s. Err: %w", fileName, err)
 	}
