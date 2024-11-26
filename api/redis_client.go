@@ -45,24 +45,24 @@ func NewRedisClient() *RedisClient {
 //  which will be the project_name and file_name concatenated together.
 //  this is done to ensure that the correct file from the correct project is returned.
 // @return []byte - the file data, or nil if it is not in the cache
-func (rc *RedisClient) getFileFromRedisCache(cachedFileName string) []byte {
-	d, err := rc.redisClient.Get(rc.ctx, cachedFileName).Result()
+func (rc *RedisClient) getDataFromRedisCache(key string) []byte {
+	d, err := rc.redisClient.Get(rc.ctx, key).Result()
 	if err != nil {
 		// an error here just means that the value is not cached, and that is ok
-		log.Default().Printf("files.go::upload - redis error on get %s: %v", cachedFileName, err)
+		log.Default().Printf("files.go::upload - redis error on get %s: %v", key, err)
 	}
 
 	if d != "" {
-		log.Default().Printf("files.go::upload - found %s in redis cache with len %d", cachedFileName, len([]byte(d)))
+		log.Default().Printf("files.go::upload - found %s in redis cache with len %d", key, len([]byte(d)))
 		return []byte(d)
 	}
 
 	return nil
 }
 
-func (rc *RedisClient) setFileInRedisCache(cachedFileName string, data []byte) {
-	err := redisClient.redisClient.Set(rc.ctx, cachedFileName, data, time.Duration(24 * time.Hour)).Err()
+func (rc *RedisClient) setDataInRedisCache(key string, data []byte) {
+	err := redisClient.redisClient.Set(rc.ctx, key, data, time.Duration(24 * time.Hour)).Err()
 	if err != nil {
-		log.Default().Printf("files.go::upload - redis error on set %s: %v", cachedFileName, err)
+		log.Default().Printf("files.go::upload - redis error on set %s: %v", key, err)
 	}
 }

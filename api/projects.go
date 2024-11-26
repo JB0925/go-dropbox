@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -98,6 +99,10 @@ func (pm *ProjectManager) doesProjectExist(name string, userId int) bool {
 
 func (pm *ProjectManager) viewProject(projectName, userName string, userId int) ([]byte, error) {
 	var projectDirectories []byte
+	cachedProjectName := projectName+":"+userName+":"+strconv.Itoa(userId)
+	if projectDirectories = redisClient.getDataFromRedisCache(cachedProjectName); projectDirectories != nil {
+		return projectDirectories, nil
+	}
 
 	err := pm.db.QueryRow(viewProjectQuery, projectName, userId).Scan(&projectDirectories)
 	if err != nil {
@@ -111,6 +116,7 @@ func (pm *ProjectManager) viewProject(projectName, userName string, userId int) 
 	}
 
 	log.Default().Printf("projects.go::viewProject - Project %s viewed successfully for user %s\n", projectName, userName)
+	redisClient.setDataInRedisCache(cachedProjectName, projectDirectories)
 	return projectDirectories, nil
 }
 

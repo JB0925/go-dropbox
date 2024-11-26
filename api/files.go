@@ -111,7 +111,7 @@ func (fm FileManager) download(projectName, fileName string, userId int) ([]byte
 	cachedFileName := projectName+":"+fileName
 	if userId != fileSharingUserId {
 		// check to see if file is cached and, if so, skip everything below
-		if data := redisClient.getFileFromRedisCache(cachedFileName); data != nil {
+		if data := redisClient.getDataFromRedisCache(cachedFileName); data != nil {
 			return data, nil
 		}
 	}
@@ -139,7 +139,7 @@ func (fm FileManager) download(projectName, fileName string, userId int) ([]byte
 	}
 
 	if userId != fileSharingUserId {
-		redisClient.setFileInRedisCache(cachedFileName, data)
+		redisClient.setDataInRedisCache(cachedFileName, data)
 	}
 	return data, nil
 }
