@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -108,7 +109,7 @@ func (fm FileManager) download(projectName, fileName string, userId int) ([]byte
 	// @param: fileName string - the name of the file
 	// @return: []byte - the content of the file
 	// @return: error - An error if one exists
-	cachedFileName := projectName+":"+fileName
+	cachedFileName := projectName+":"+fileName+":"+strconv.Itoa(userId)
 	if userId != fileSharingUserId {
 		// check to see if file is cached and, if so, skip everything below
 		if data := redisClient.getDataFromRedisCache(cachedFileName); data != nil {
