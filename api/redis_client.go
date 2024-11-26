@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -12,15 +13,13 @@ const (
 	defaultRedisDb  = 0
 )
 
-var (
-	ctx = context.Background()
-)
-
 type RedisClient struct {
 	redisClient *redis.Client
+	ctx         context.Context
 }
 
 func NewRedisClient() *RedisClient {
+	ctx := context.Background()
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: redisConnString,
 		DB: defaultRedisDb,
@@ -36,6 +35,7 @@ func NewRedisClient() *RedisClient {
 	log.Default().Println("redis_client.go::Connected to Redis!")
 	return &RedisClient{
 		redisClient: redisClient,
+		ctx: ctx,
 	}
 }
 
@@ -46,8 +46,9 @@ func NewRedisClient() *RedisClient {
 //  this is done to ensure that the correct file from the correct project is returned.
 // @return []byte - the file data, or nil if it is not in the cache
 func (rc *RedisClient) getFileFromRedisCache(cachedFileName string) []byte {
-	d, err := rc.redisClient.Get(ctx, cachedFileName).Result()
+	d, err := rc.redisClient.Get(rc.ctx, cachedFileName).Result()
 	if err != nil {
+		// an error here just means that the value is not cached, and that is ok
 		log.Default().Printf("files.go::upload - redis error on get %s: %v", cachedFileName, err)
 	}
 
@@ -57,4 +58,11 @@ func (rc *RedisClient) getFileFromRedisCache(cachedFileName string) []byte {
 	}
 
 	return nil
+}
+
+func (rc *RedisClient) setFileInRedisCache(cachedFileName string, data []byte) {
+	err := redisClient.redisClient.Set(rc.ctx, cachedFileName, data, time.Duration(24 * time.Hour)).Err()
+	if err != nil {
+		log.Default().Printf("files.go::upload - redis error on set %s: %v", cachedFileName, err)
+	}
 }

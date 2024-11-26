@@ -139,10 +139,7 @@ func (fm FileManager) download(projectName, fileName string, userId int) ([]byte
 	}
 
 	if userId != fileSharingUserId {
-		err = redisClient.redisClient.Set(ctx, cachedFileName, data, time.Duration(24 * time.Hour)).Err()
-		if err != nil {
-			log.Default().Printf("files.go::upload - redis error on set %s: %v", cachedFileName, err)
-		}
+		redisClient.setFileInRedisCache(cachedFileName, data)
 	}
 	return data, nil
 }
