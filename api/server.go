@@ -170,9 +170,9 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// if isLocalRequest(r) {
-	// 	go writeTokenToFile(token, sd.Username) // write the token to a file for later use - best effort
-	// }
+	if isLocalRequest(r) {
+		go writeTokenToFile(token, sd.Username) // write the token to a file for later use - best effort
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(map[string]string{"token": token})
