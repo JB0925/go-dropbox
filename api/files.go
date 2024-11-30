@@ -124,7 +124,12 @@ func (fm FileManager) download(projectName, fileName string, userId int) ([]byte
 	var lastMtime int64
 	var createdAt int64
 	var filePath string
-	err := fm.db.QueryRow(getFileQuery, fileName, projectName).Scan(&data, &fileUserId, &lastMtime, &createdAt, &filePath)
+	txn, err := fm.db.Begin()
+	if err != nil {
+		log.Default().Printf("files.go::download - Error beginning transaction. Err: %v", err)
+		return nil, nil, err
+	}
+	err = fm.db.QueryRow(getFileQuery, fileName, projectName).Scan(&data, &fileUserId, &lastMtime, &createdAt, &filePath)
 	if err != nil {
 		message := fmt.Sprintf("files.go::get - Error querying database: %v", err)
 		log.Default().Println(message)
@@ -155,7 +160,7 @@ func (fm FileManager) download(projectName, fileName string, userId int) ([]byte
 		"filePath": filePath,
 		"ttl": time.Duration(24 * time.Hour).String(),
 	}
-	return data, metadata, nil
+	return data, metadata, txn.Commit()
 }
 
 func (fm FileManager) getProjectIdAndDirectories(projectName string, userId int) (int, []byte, error) {
@@ -220,6 +225,10 @@ func (fm *FileManager) doesFileExist(project_id, user_id int, fileName, filePath
 	// @param: user_id int - the user id of the file
 	// @return: bool - true if the file exists, false if it does not
 	// @return: error - An error if one exists
+	txn, err := fm.db.Begin()
+	if err != nil {
+		log.Default().Printf("files.go::doesFileExist - Error beginning transaction: %v", err)
+	}
 	rows, err := fm.db.Query(checkFileExistsQuery, project_id, user_id, fileName, filePath)
 	if err != nil {
 		message := fmt.Sprintf("files.go::doesFileExist - Error querying database: %v", err)
@@ -233,7 +242,7 @@ func (fm *FileManager) doesFileExist(project_id, user_id int, fileName, filePath
 		return true, nil
 	}
 
-	return false, nil
+	return false, txn.Commit()
 }
 
 //lint:ignore U1000 Ignore unused function in case of potential future use
@@ -334,14 +343,21 @@ func (fm *FileManager) updateProjectStructure(
 		return err
 	}
 
+	txn, err := fm.db.Begin()
+	if err != nil {
+		log.Default().Printf("files.go::updateProjectStructure - Error beginning transaction: %v", err)
+	}
 	_, err = fm.db.Exec(updateProjectDirectoryQuery, directoriesToJson, projectId, timestamp)
 	if err != nil {
 		message := fmt.Sprintf("files.go::updateProjectStructure - Error updating project structure: %v", err)
 		log.Default().Println(message)
+		if e := txn.Rollback(); e != nil {
+			log.Default().Printf("files.go::updateProjectStructure - Error rolling back transaction: %v", e)
+		}
 		return err
 	}
 
-	return nil
+	return txn.Commit()
 }
 
 func (fm *FileManager) getFileOwnerData(projectName, username string) (int, int, []byte, error) {
@@ -569,14 +585,23 @@ func (fm *FileManager) update(
 	}
 
 	timestamp := time.Now().Unix()
+
+	txn, err := fm.db.Begin()
+	if err != nil {
+		log.Default().Printf("files.go::update - Error beginning transaction when updating file %s. Err: %v", fd.Name, err)
+	}
+
 	_, err = fm.db.Query(updateFileQuery, fileContent, timestamp, fd.Name, projectId, userId)
 	if err != nil {
 		message := fmt.Sprintf("files.go::update - Error updating file: %v", err)
 		log.Default().Println(message)
+		if e := txn.Rollback(); e != nil {
+			log.Default().Printf("files.go::update - got error on transaction rollback. Err: %v", e)
+		}
 		return err
 	}
 
-	return nil
+	return txn.Commit()
 }
 
 func (fm *FileManager) createHashFromContent(fileContent []byte) (string, error) {
