@@ -327,7 +327,8 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, metadata, err := fileManager.download(projectName, fileName, intUserId)
+	fd := FileData{Name: fileName, ProjectName: projectName, UserId: intUserId}
+	file, metadata, err := fileManager.download(fd)
 	if err != nil {
 		message := fmt.Sprintf("server.go::downloadFile - Error getting file: %v", err)
 		log.Default().Println(message)
@@ -480,16 +481,16 @@ func deleteProject(w http.ResponseWriter, r *http.Request) {
 func shareFile(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	sd := SharingData{}
-	if err := json.NewDecoder(r.Body).Decode(&sd); err != nil {
+	fd := FileData{}
+	if err := json.NewDecoder(r.Body).Decode(&fd); err != nil {
 		message := fmt.Errorf("cannot decode malformed request body. Err: %w", err)
 		log.Default().Println(message)
 		http.Error(w, "Error decoding request body.", http.StatusBadRequest)
 		return
 	}
 
-	if sd.Name == "" || sd.ProjectId == 0 || sd.ProjectName == "" {
-		log.Default().Printf("Invalid request body - one or more fields are empty: %v", sd)
+	if fd.Name == "" || fd.ProjectId == 0 || fd.ProjectName == "" {
+		log.Default().Printf("Invalid request body - one or more fields are empty: %v", fd)
 		http.Error(w, "One or more request body fields are missing. Requires name, project_name, and project_id", http.StatusBadRequest)
 		return
 	}
@@ -501,8 +502,8 @@ func shareFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sd.UserId = userId
-	hash, err := fileManager.storeFileHashForSharing(sd)
+	fd.UserId = userId
+	hash, err := fileManager.storeFileHashForSharing(fd)
 	if err != nil {
 		log.Default().Println("error storing hash for sharing file. Err: %w", err)
 		http.Error(w, "Error storing hash for file sharing.", getErrorCode(err))

@@ -66,6 +66,7 @@ curl -kv -X DELETE http://localhost:8080/projects/foor -H 'content-type: applica
 - content-type is multipart/form-data
 - can create a new filepath by passing in what you want the filepath to be
 - can have two files with the same name, so long as they are in different directories.
+- **NOTE:** Doing so will also update the project structure automatically by adding the file into the correct directory that you've specified in the below request.
 ```
 curl -kv -X POST http://localhost:8080/files -H 'content-type: multipart/form-data' -H 'Authorization: ' -F 'name=YESLogo2.png' -F 'project_name=foo' -F 'path=/root/bar' -F 'file=@/Users/jessebrink/curbside/src/YESLogo2.png'
 ```

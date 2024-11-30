@@ -17,11 +17,6 @@ type (
 		Name        string `json:"name"`
 		Path        string `json:"path"`
 		ProjectName string `json:"project_name"`
-	}
-
-	SharingData struct {
-		Name        string `json:"name"`
-		ProjectName string `json:"project_name"`
 		UserId      int    `json:"user_id"`
 		ProjectId   int    `json:"project_id"`
 	}
@@ -102,7 +97,7 @@ func (fm FileManager) upload(fd FileData, username string, fileContent []byte) e
 	return nil
 }
 
-func (fm FileManager) download(projectName, fileName string, userId int) ([]byte, map[string]string, error) {
+func (fm FileManager) download(fd FileData) ([]byte, map[string]string, error) {
 	// This function gets the file content from the database
 	// and returns an error if the file does not exist.
 	//
@@ -110,8 +105,8 @@ func (fm FileManager) download(projectName, fileName string, userId int) ([]byte
 	// @param: fileName string - the name of the file
 	// @return: []byte - the content of the file
 	// @return: error - An error if one exists
-	cachedFileName := projectName+":"+fileName+":"+strconv.Itoa(userId)
-	if userId != fileSharingUserId {
+	cachedFileName := fd.ProjectName+":"+fd.Name+":"+strconv.Itoa(fd.UserId)
+	if fd.UserId != fileSharingUserId {
 		// check to see if file is cached and, if so, skip everything below
 		if data := redisClient.getDataFromRedisCache(cachedFileName); data != nil {
 			metadata := redisClient.getFileMetaDataFromRedisCache(cachedFileName)
@@ -129,7 +124,7 @@ func (fm FileManager) download(projectName, fileName string, userId int) ([]byte
 		log.Default().Printf("files.go::download - Error beginning transaction. Err: %v", err)
 		return nil, nil, err
 	}
-	err = fm.db.QueryRow(getFileQuery, fileName, projectName).Scan(&data, &fileUserId, &lastMtime, &createdAt, &filePath)
+	err = fm.db.QueryRow(getFileQuery, fd.Name, fd.ProjectName).Scan(&data, &fileUserId, &lastMtime, &createdAt, &filePath)
 	if err != nil {
 		message := fmt.Sprintf("files.go::get - Error querying database: %v", err)
 		log.Default().Println(message)
@@ -143,13 +138,13 @@ func (fm FileManager) download(projectName, fileName string, userId int) ([]byte
 		return nil, nil, ErrFileDoesNotExist
 	}
 
-	if userId != fileSharingUserId && fileUserId != userId {
-		message := fmt.Sprintf("files.go::get - User with id %d does not have access file %s", userId, fileName)
+	if fd.UserId != fileSharingUserId && fileUserId != fd.UserId {
+		message := fmt.Sprintf("files.go::get - User with id %d does not have access file %s", fd.UserId, fd.Name)
 		log.Default().Println(message)
 		return nil, nil, ErrUnauthorized
 	}
 
-	if userId != fileSharingUserId {
+	if fd.UserId != fileSharingUserId {
 		redisClient.setDataInRedisCache(cachedFileName, data)
 		redisClient.setFileMetaDataInRedisCache(cachedFileName, filePath, lastMtime, createdAt)
 	}
@@ -619,10 +614,10 @@ func (fm *FileManager) createHashFromContent(fileContent []byte) (string, error)
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
-func (fm *FileManager) storeFileHashForSharing(sd SharingData) (string, error) {
+func (fm *FileManager) storeFileHashForSharing(fd FileData) (string, error) {
 	// After the file's content is hashed, this function stores the hash in the shared table
 	// 
-	// @param sd - SharingData: A struct containing the file name, project name, user ID, and project ID
+	// @param fd - SharingData: A struct containing the file name, project name, user ID, and project ID
 	// @return string: The hash that was stored.
 	// @return error: An error if one occurred, nil otherwise.
 	var uid int
@@ -630,20 +625,20 @@ func (fm *FileManager) storeFileHashForSharing(sd SharingData) (string, error) {
 	var lastMtime int64
 	var createdAt int64
 	var filePath string
-	if err := fm.db.QueryRow(getFileQuery, sd.Name, sd.ProjectName).Scan(&fileData, &uid, &lastMtime, &createdAt, &filePath); err != nil {
+	if err := fm.db.QueryRow(getFileQuery, fd.Name, fd.ProjectName).Scan(&fileData, &uid, &lastMtime, &createdAt, &filePath); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", ErrFileDoesNotExist
 		}
 		return "", fmt.Errorf("error getting file. Err: %w", err)
 	}
-	if sd.UserId != uid {
+	if fd.UserId != uid {
 		return "", fmt.Errorf("error storing hash for shared file. User ids do not match")
 	}
 	hash, err := fm.createHashFromContent(fileData)
 	if err != nil {
 		return "", fmt.Errorf("error creating hash of file content. Err: %w", err)
 	}
-	_, err = fm.db.Exec(createSharedFileQuery, hash, sd.UserId, sd.ProjectId)
+	_, err = fm.db.Exec(createSharedFileQuery, hash, fd.UserId, fd.ProjectId)
 	if err != nil {
 		return "", fmt.Errorf("error storing hash for file sharing. Err: %w", err)
 	}
@@ -676,7 +671,7 @@ func (fm *FileManager) shareFile(userGivenHash string) (string, []byte, error) {
 
 	// at this point, we've determined that this file exists as expected,
 	// so now we can call "download" to return it to the user.
-	fileData, _, err := fm.download(projectName, fileName, fileSharingUserId)
+	fileData, _, err := fm.download(FileData{Name: fileName, ProjectName: projectName, UserId: fileSharingUserId})
 	if err != nil {
 		return "", []byte{}, fmt.Errorf("could not download file %s. Err: %w", fileName, err)
 	}
