@@ -63,8 +63,8 @@ func NewServer() *http.Server {
 	m := mux.NewRouter()
 	m.Use(rateLimiter.RateLimit, checkAuth)
 
-	m.HandleFunc("/signup", http.HandlerFunc(signupUser)).Methods(http.MethodPost)
-	m.HandleFunc("/login", http.HandlerFunc(loginUser)).Methods(http.MethodPost)
+	m.HandleFunc("/auth/signup", http.HandlerFunc(signupUser)).Methods(http.MethodPost)
+	m.HandleFunc("/auth/login", http.HandlerFunc(loginUser)).Methods(http.MethodPost)
 	m.HandleFunc("/projects", http.HandlerFunc(createProject)).Methods(http.MethodPost)
 	m.HandleFunc("/projects", http.HandlerFunc(viewProject)).Methods(http.MethodGet)
 	m.HandleFunc("/projects/{project_name}", http.HandlerFunc(deleteProject)).Methods(http.MethodDelete)

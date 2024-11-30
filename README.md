@@ -28,16 +28,16 @@ For more on how to install Go, please see the official [documentation](https://g
 - `username` must be at least four characters long.
 - `password` must be at least eight characters long.
 ```
-curl -kv -X POST http://localhost:8080/signup -H 'content-type: application/json' -d '{"username": "jesseb", "password": "foobar123"}'
+curl -kv -X POST http://localhost:8080/auth/signup -H 'content-type: application/json' -d '{"username": "jesseb", "password": "foobar123"}'
 ```
 
 ## Login - returns a JWT
 ```
-curl -kv -X POST http://localhost:8080/login -H 'content-type: application/json' -d '{"username": "jesseb", "password": "foobar123"}'
+curl -kv -X POST http://localhost:8080/auth/login -H 'content-type: application/json' -d '{"username": "jesseb", "password": "foobar123"}'
 ```
 
 ## Helpful Tip Re: Auth Tokens in the CLI
-When you deploy `go-dropbox` locally and then login or signup, it will write a JWT token to your home directory. This is the same token that is returned to you via /login. Instead of hunting down this token in your terminal, or copy and pasting from that file each time, you can do something like this:
+When you deploy `go-dropbox` locally and then login or signup, it will write a JWT token to your home directory. This is the same token that is returned to you via /auth/login. Instead of hunting down this token in your terminal, or copy and pasting from that file each time, you can do something like this:
 ```
 curl -kv "http://localhost:8080/projects?project_name=foo" -H 'content-type: application/json' -H "Authorization: $(cat ~/go-dropbox-token-<your-username>.txt)" | jq -r '.project' | jq
 ```

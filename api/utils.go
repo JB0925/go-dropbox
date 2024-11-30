@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	loginExcludedPaths = []string{"/login", "/signup", "/files/shared"}
+	loginExcludedPaths = []string{"/auth/login", "/auth/signup", "/files/shared"}
 	localAddrs         = []string{"127.0.0.1", "::1"}
 )
 

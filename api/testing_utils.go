@@ -21,8 +21,8 @@ import (
 
 const (
 	baseUrl               = "http://localhost:8080"
-	signupEndpoint        = "/signup"
-	loginEndpoint         = "/login"
+	signupEndpoint        = "/auth/signup"
+	loginEndpoint         = "/auth/login"
 	projectsEndpoint      = "/projects"
 	filesEndpoint         = "/files"
 	sharingFilesEndpoint  = "/files/sharing"
