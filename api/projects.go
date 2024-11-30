@@ -87,6 +87,15 @@ func (pm *ProjectManager) getUserId(username string) (int, error) {
 }
 
 func (pm *ProjectManager) doesProjectExist(name string, userId int) bool {
+	txn, err := pm.db.Begin()
+	defer func(){
+		if err := txn.Commit(); err != nil {
+			log.Default().Printf("projects.go::doesProjectExist - Error committing transaction. Err: %v", err)
+		}
+	}()
+	if err != nil {
+		log.Default().Printf("projects.go::doesProjectExist - Error beginning transaction. Err: %v", err)
+	}
 	rows, err := pm.db.Query(checkProjectExistsQuery, name, userId)
 	if err != nil {
 		message := fmt.Sprintf("projects.go::doesProjectExist - Error querying database: %v", err)
