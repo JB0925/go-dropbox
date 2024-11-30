@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -16,6 +17,7 @@ const (
 type RedisClient struct {
 	redisClient *redis.Client
 	ctx         context.Context
+	sync.RWMutex
 }
 
 func NewRedisClient() *RedisClient {
@@ -46,6 +48,8 @@ func NewRedisClient() *RedisClient {
 //  this is done to ensure that the correct file from the correct project is returned.
 // @return []byte - the file data, or nil if it is not in the cache
 func (rc *RedisClient) getDataFromRedisCache(key string) []byte {
+	rc.RLock()
+	defer rc.RUnlock()
 	d, err := rc.redisClient.Get(rc.ctx, key).Result()
 	if err != nil {
 		// an error here just means that the value is not cached, and that is ok
@@ -61,6 +65,8 @@ func (rc *RedisClient) getDataFromRedisCache(key string) []byte {
 }
 
 func (rc *RedisClient) setDataInRedisCache(key string, data []byte) {
+	rc.Lock()
+	defer rc.Unlock()
 	err := redisClient.redisClient.Set(rc.ctx, key, data, time.Duration(24 * time.Hour)).Err()
 	if err != nil {
 		log.Default().Printf("files.go::upload - redis error on set %s: %v", key, err)
@@ -69,6 +75,8 @@ func (rc *RedisClient) setDataInRedisCache(key string, data []byte) {
 
 func (rc *RedisClient) getFileMetaDataFromRedisCache(key string) map[string]string {
 	var metadata map[string]string
+	rc.RLock()
+	defer rc.RUnlock()
 	metadata, err := redisClient.redisClient.HGetAll(rc.ctx, key+"-metadata").Result()
 	if err != nil || len(metadata) == 0 {
 		log.Default().Printf("got error getting file metadata from redis cache. Err: %v", err)
@@ -90,6 +98,8 @@ func (rc *RedisClient) setFileMetaDataInRedisCache(
 	lastMtime,
 	createdAt int64,
 ) {
+	rc.Lock()
+	defer rc.Unlock()
 	err := redisClient.redisClient.HMSet(rc.ctx, key+"-metadata", map[string]interface{}{
 		"mtime": lastMtime,
 		"createdAt": createdAt,
@@ -103,6 +113,8 @@ func (rc *RedisClient) setFileMetaDataInRedisCache(
 }
 
 func (rc *RedisClient) deleteFileAndMetadataFromRedisCache(fileName, metaDataName string) error {
+	rc.Lock()
+	defer rc.Unlock()
 	numKeysDeleted, err := redisClient.redisClient.Del(rc.ctx, fileName, metaDataName).Result()
 	if err != nil || numKeysDeleted != 2 {
 		log.Default().Printf("files.go::deleteFile - could not delete from redis cache. Err: %v", err)
