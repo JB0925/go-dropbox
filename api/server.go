@@ -327,7 +327,7 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, err := fileManager.download(projectName, fileName, intUserId)
+	file, metadata, err := fileManager.download(projectName, fileName, intUserId)
 	if err != nil {
 		message := fmt.Sprintf("server.go::downloadFile - Error getting file: %v", err)
 		log.Default().Println(message)
@@ -338,6 +338,10 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", strconv.Itoa(len(file)))
+	w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%s", metadata["ttl"]))
+	w.Header().Set("X-LAST-MODIFIED", metadata["mtime"])
+	w.Header().Set("X-CREATED-AT", metadata["createdAt"])
+	w.Header().Set("X-FILEPATH", metadata["filePath"])
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(file)
 	if err != nil {

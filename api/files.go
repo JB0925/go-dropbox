@@ -31,8 +31,9 @@ type (
 	}
 )
 
-var (
+const (
 	fileSharingUserId = -1  // shared files will never be cached and require no auth
+	baseTen           = 10
 )
 
 func NewFileManager(dbUrl string) *FileManager {
@@ -101,7 +102,7 @@ func (fm FileManager) upload(fd FileData, username string, fileContent []byte) e
 	return nil
 }
 
-func (fm FileManager) download(projectName, fileName string, userId int) ([]byte, error) {
+func (fm FileManager) download(projectName, fileName string, userId int) ([]byte, map[string]string, error) {
 	// This function gets the file content from the database
 	// and returns an error if the file does not exist.
 	//
@@ -113,36 +114,48 @@ func (fm FileManager) download(projectName, fileName string, userId int) ([]byte
 	if userId != fileSharingUserId {
 		// check to see if file is cached and, if so, skip everything below
 		if data := redisClient.getDataFromRedisCache(cachedFileName); data != nil {
-			return data, nil
+			metadata := redisClient.getFileMetaDataFromRedisCache(cachedFileName)
+			return data, metadata, nil
 		}
 	}
 
 	var data []byte
 	var fileUserId int
-	err := fm.db.QueryRow(getFileQuery, fileName, projectName).Scan(&data, &fileUserId)
+	var lastMtime int64
+	var createdAt int64
+	var filePath string
+	err := fm.db.QueryRow(getFileQuery, fileName, projectName).Scan(&data, &fileUserId, &lastMtime, &createdAt, &filePath)
 	if err != nil {
 		message := fmt.Sprintf("files.go::get - Error querying database: %v", err)
 		log.Default().Println(message)
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrFileDoesNotExist
+			return nil, nil, ErrFileDoesNotExist
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
 	if len(data) == 0 {
-		return nil, ErrFileDoesNotExist
+		return nil, nil, ErrFileDoesNotExist
 	}
 
 	if userId != fileSharingUserId && fileUserId != userId {
 		message := fmt.Sprintf("files.go::get - User with id %d does not have access file %s", userId, fileName)
 		log.Default().Println(message)
-		return nil, ErrUnauthorized
+		return nil, nil, ErrUnauthorized
 	}
 
 	if userId != fileSharingUserId {
 		redisClient.setDataInRedisCache(cachedFileName, data)
+		redisClient.setFileMetaDataInRedisCache(cachedFileName, filePath, lastMtime, createdAt)
 	}
-	return data, nil
+
+	metadata := map[string]string{
+		"mtime": strconv.FormatInt(lastMtime, baseTen),
+		"createdAt": strconv.FormatInt(createdAt, baseTen),
+		"filePath": filePath,
+		"ttl": time.Duration(24 * time.Hour).String(),
+	}
+	return data, metadata, nil
 }
 
 func (fm FileManager) getProjectIdAndDirectories(projectName string, userId int) (int, []byte, error) {
@@ -474,6 +487,12 @@ func (fm *FileManager) deleteFile(projectName, fileName, filePath, userName stri
 		return err
 	}
 
+	cachedFileName := projectName+":"+fileName+":"+strconv.Itoa(userId)
+	cachedFileMetaData := cachedFileName+"-metadata"
+	if err := redisClient.deleteFileAndMetadataFromRedisCache(cachedFileName, cachedFileMetaData); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -583,7 +602,10 @@ func (fm *FileManager) storeFileHashForSharing(sd SharingData) (string, error) {
 	// @return error: An error if one occurred, nil otherwise.
 	var uid int
 	var fileData []byte
-	if err := fm.db.QueryRow(getFileQuery, sd.Name, sd.ProjectName).Scan(&fileData, &uid); err != nil {
+	var lastMtime int64
+	var createdAt int64
+	var filePath string
+	if err := fm.db.QueryRow(getFileQuery, sd.Name, sd.ProjectName).Scan(&fileData, &uid, &lastMtime, &createdAt, &filePath); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", ErrFileDoesNotExist
 		}
@@ -629,7 +651,7 @@ func (fm *FileManager) shareFile(userGivenHash string) (string, []byte, error) {
 
 	// at this point, we've determined that this file exists as expected,
 	// so now we can call "download" to return it to the user.
-	fileData, err := fm.download(projectName, fileName, fileSharingUserId)
+	fileData, _, err := fm.download(projectName, fileName, fileSharingUserId)
 	if err != nil {
 		return "", []byte{}, fmt.Errorf("could not download file %s. Err: %w", fileName, err)
 	}

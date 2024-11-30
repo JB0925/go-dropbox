@@ -18,7 +18,7 @@ const checkFileExistsQuery = `SELECT id FROM files WHERE project_id = $1 AND use
 //lint:ignore U1000 Ignore unused SQL query during lint check
 const getFilesQuery = `SELECT id FROM files WHERE project_id = $1 AND user_id = $2`
 const getProjectDirectoriesQuery = `SELECT directories FROM projects WHERE id = $1`
-const getFileQuery = `SELECT files.data, files.user_id FROM files JOIN projects ON files.project_id = projects.id WHERE files.name = $1 AND projects.project_name = $2`
+const getFileQuery = `SELECT files.data, files.user_id, files.mtime, files.created_at, files.path FROM files JOIN projects ON files.project_id = projects.id WHERE files.name = $1 AND projects.project_name = $2`
 const updateProjectDirectoryQuery = `UPDATE projects SET directories = $1, mtime = $3 WHERE id = $2`
 const viewProjectQuery = `SELECT directories FROM projects WHERE project_name = $1 and user_id = $2`
 const deleteFileQuery = `DELETE FROM files USING projects WHERE files.project_id = projects.id AND files.name = $1 AND projects.project_name = $2 AND files.user_id = $3 AND files.project_id = $4 AND files.path = $5`

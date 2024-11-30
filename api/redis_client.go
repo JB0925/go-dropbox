@@ -66,3 +66,48 @@ func (rc *RedisClient) setDataInRedisCache(key string, data []byte) {
 		log.Default().Printf("files.go::upload - redis error on set %s: %v", key, err)
 	}
 }
+
+func (rc *RedisClient) getFileMetaDataFromRedisCache(key string) map[string]string {
+	var metadata map[string]string
+	metadata, err := redisClient.redisClient.HGetAll(rc.ctx, key+"-metadata").Result()
+	if err != nil || len(metadata) == 0 {
+		log.Default().Printf("got error getting file metadata from redis cache. Err: %v", err)
+	} else {
+		ttl, err := redisClient.redisClient.TTL(rc.ctx, key).Result()
+		if err != nil {
+			log.Default().Printf("got error getting file metadata from redis cache. Err: %v", err)
+		} else {
+			metadata["ttl"] = ttl.String()
+		}
+	}
+
+	return metadata
+}
+
+func (rc *RedisClient) setFileMetaDataInRedisCache(
+	key, 
+	filePath string,
+	lastMtime,
+	createdAt int64,
+) {
+	err := redisClient.redisClient.HMSet(rc.ctx, key+"-metadata", map[string]interface{}{
+		"mtime": lastMtime,
+		"createdAt": createdAt,
+		"filePath": filePath,
+		"ttl": time.Duration(24 * time.Hour).String(),
+	}).Err()
+
+	if err != nil {
+		log.Default().Printf("error setting file metadata in Redis. Err: %v", err)
+	}
+}
+
+func (rc *RedisClient) deleteFileAndMetadataFromRedisCache(fileName, metaDataName string) error {
+	numKeysDeleted, err := redisClient.redisClient.Del(rc.ctx, fileName, metaDataName).Result()
+	if err != nil || numKeysDeleted != 2 {
+		log.Default().Printf("files.go::deleteFile - could not delete from redis cache. Err: %v", err)
+		return err
+	}
+
+	return nil
+}
