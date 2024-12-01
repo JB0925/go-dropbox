@@ -81,7 +81,7 @@ func (fm FileManager) upload(fd FileData) error {
 	log.Default().Println("files.go::upload - Directories: ", directories)
 
 	timestamp := time.Now().Unix()
-	err = fm.storeFile(fd, fd.Content, projectId, timestamp)
+	err = fm.storeFile(fd, projectId, timestamp)
 	if err != nil {
 		message := fmt.Sprintf("files.go::upload - Error storing file: %v", err)
 		log.Default().Println(message)
@@ -376,7 +376,6 @@ func (fm *FileManager) getFileOwnerData(fd FileData) (int, []byte, error) {
 
 func (fm *FileManager) storeFile(
 	fd FileData,
-	fileContent []byte,
 	projectId int,
 	timestamp int64) error {
 	// A wrapper method used to call a database and store the contents of a file
@@ -390,7 +389,7 @@ func (fm *FileManager) storeFile(
 		uploadFileQuery,
 		fd.Name,
 		fd.Path,
-		fileContent,
+		fd.Content,
 		fd.UserId,
 		projectId,
 		timestamp,
