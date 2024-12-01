@@ -38,7 +38,7 @@ func NewFileManager(dbUrl string) *FileManager {
 	return &FileManager{db: db}
 }
 
-func (fm FileManager) upload(fd FileData, username string, fileContent []byte) error {
+func (fm FileManager) upload(fd FileData, fileContent []byte) error {
 	// This function checks the database for a duplicate file name
 	// and then upload the file to the database.
 	// It returns an error if the file already exists
@@ -48,12 +48,12 @@ func (fm FileManager) upload(fd FileData, username string, fileContent []byte) e
 	// @param: username string - the username of the user uploading the file
 	// @param: fileContent []byte - the content of the file to be uploaded
 	// @return: An error if one exists
-	projectId, userId, dirs, err := fm.getFileOwnerData(fd.ProjectName, username)
+	projectId, dirs, err := fm.getFileOwnerData(fd.ProjectName, fd.UserId)
 	if err != nil {
 		return err
 	}
 
-	exists, err := fm.doesFileExist(projectId, userId, fd.Name, fd.Path)
+	exists, err := fm.doesFileExist(projectId, fd.UserId, fd.Name, fd.Path)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (fm FileManager) upload(fd FileData, username string, fileContent []byte) e
 	log.Default().Println("files.go::upload - Directories: ", directories)
 
 	timestamp := time.Now().Unix()
-	err = fm.storeFile(fd, fileContent, projectId, userId, timestamp)
+	err = fm.storeFile(fd, fileContent, projectId, timestamp)
 	if err != nil {
 		message := fmt.Sprintf("files.go::upload - Error storing file: %v", err)
 		log.Default().Println(message)
@@ -163,6 +163,7 @@ func (fm FileManager) getProjectIdAndDirectories(projectName string, userId int)
 	// and returns an error if the project does not exist.
 	//
 	// @param: projectName string - the name of the project
+	// @param: userId - the id of the user who made the request
 	// @return: int - the project id
 	// @return: []byte - the directories of the project
 	// @return: error - An error if one exists
@@ -191,6 +192,7 @@ func (fm FileManager) getProjectIdAndDirectories(projectName string, userId int)
 	return 0, []byte{}, ErrProjectDoesNotExist
 }
 
+//lint:ignore U1000 Ignore unused function - DEPRECATED
 func (fm *FileManager) getUserId(username string) (int, error) {
 	// Given a username, this function queries the database
 	// and gets the user id of the associated username if it exists.
@@ -355,34 +357,26 @@ func (fm *FileManager) updateProjectStructure(
 	return txn.Commit()
 }
 
-func (fm *FileManager) getFileOwnerData(projectName, username string) (int, int, []byte, error) {
+func (fm *FileManager) getFileOwnerData(projectName string, userId int) (int, []byte, error) {
 	// One function to get several aspects of user and project related data,
 	// such as the project id, user id, and directories.
 	//
 	// @param: projectName string - the name of the project
-	// @param: username string - the username of the user
 	// @return: int - the project id
-	// @return: int - the user id
 	// @return: []byte - the directories of the project
 	// @return: error - An error if one exists
-	userId, err := fm.getUserId(username)
-	if err != nil {
-		return 0, 0, []byte{}, err
-	}
-
 	projectId, directories, err := fm.getProjectIdAndDirectories(projectName, userId)
 	if err != nil {
-		return 0, 0, []byte{}, err
+		return 0, []byte{}, err
 	}
 
-	return projectId, userId, directories, nil
+	return projectId, directories, nil
 }
 
 func (fm *FileManager) storeFile(
 	fd FileData,
 	fileContent []byte,
-	projectId,
-	userId int,
+	projectId int,
 	timestamp int64) error {
 	// A wrapper method used to call a database and store the contents of a file
 	// and its related metadata.
@@ -390,14 +384,13 @@ func (fm *FileManager) storeFile(
 	// @param: fd FileData - the file data to be uploaded
 	// @param: fileContent []byte - the content of the file to be uploaded
 	// @param: projectId int - the project id of the file
-	// @param: userId int - the user id of the file
 	// @return: error - An error if one exists
 	_, err := fm.db.Exec(
 		uploadFileQuery,
 		fd.Name,
 		fd.Path,
 		fileContent,
-		userId,
+		fd.UserId,
 		projectId,
 		timestamp,
 		timestamp)
@@ -456,7 +449,7 @@ func (fm *FileManager) findAndDeleteFileFromDirectories(
 	return nil
 }
 
-func (fm *FileManager) deleteFile(projectName, fileName, filePath, userName string) error {
+func (fm *FileManager) deleteFile(fd FileData) error {
 	// This function deletes a file from the database
 	// and returns an error if the file does not exist.
 	//
@@ -465,7 +458,7 @@ func (fm *FileManager) deleteFile(projectName, fileName, filePath, userName stri
 	// @param: filePath string - the path of the file
 	// @param: userName string - the username of the user
 	// @return: error - An error if one exists
-	projectId, userId, dirs, err := fm.getFileOwnerData(projectName, userName)
+	projectId, dirs, err := fm.getFileOwnerData(fd.ProjectName, fd.UserId)
 	if err != nil {
 		return err
 	}
@@ -477,14 +470,14 @@ func (fm *FileManager) deleteFile(projectName, fileName, filePath, userName stri
 		return err
 	}
 
-	err = fm.findAndDeleteFileFromDirectories(fileName, filePath, dirsMap)
+	err = fm.findAndDeleteFileFromDirectories(fd.Name, fd.Path, dirsMap)
 	if err != nil {
 		message := fmt.Sprintf("files.go::delete - Error finding and deleting file from directories: %v", err)
 		log.Default().Println(message)
 		return err
 	}
 
-	err = fm.removeFileFromDataStore(fileName, filePath, projectName, projectId, userId)
+	err = fm.removeFileFromDataStore(fd.Name, fd.Path, fd.ProjectName, projectId, fd.UserId)
 	if err != nil {
 		message := fmt.Sprintf("files.go::delete - Error removing file from data store: %v", err)
 		log.Default().Println(message)
@@ -498,7 +491,7 @@ func (fm *FileManager) deleteFile(projectName, fileName, filePath, userName stri
 		return err
 	}
 
-	cachedFileName := projectName+":"+fileName+":"+strconv.Itoa(userId)
+	cachedFileName := fd.ProjectName+":"+fd.Name+":"+strconv.Itoa(fd.UserId)
 	cachedFileMetaData := cachedFileName+"-metadata"
 	if err := redisClient.deleteFileAndMetadataFromRedisCache(cachedFileName, cachedFileMetaData); err != nil {
 		return err

@@ -258,6 +258,12 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	userName := r.Header.Get("X-GO-DROPBOX-USER")
 	log.Default().Printf("server.go::uploadFile - User %s is uploading a file\n", userName)
 
+	userId, err := strconv.Atoi(r.Header.Get("X-GO-DROPBOX-USER-ID"))
+	if err != nil {
+		log.Default().Printf("Could not get user id for %s. Err: %v", userName, err)
+		http.Error(w, "INTERNAL SERVER ERROR", http.StatusInternalServerError)
+	}
+
 	path := r.FormValue("path")
 	name := r.FormValue("name")
 	projectName := r.FormValue("project_name")
@@ -293,9 +299,10 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 		Name:        name,
 		Path:        path,
 		ProjectName: projectName,
+		UserId: userId,
 	}
 
-	if err = fileManager.upload(fd, userName, fc); err != nil {
+	if err = fileManager.upload(fd, fc); err != nil {
 		message := fmt.Sprintf("server.go::uploadFile - Error uploading file: %v", err)
 		log.Default().Println(message)
 		http.Error(w, err.Error(), getErrorCode(err))
@@ -435,8 +442,13 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 
 	log.Default().Println("server.go::deleteFile - Got data for delete request. Data: ", d)
 
-	username := r.Header.Get("X-GO-DROPBOX-USER")
-	err = fileManager.deleteFile(d["project_name"], d["name"], d["path"], username)
+	userId, err := strconv.Atoi(r.Header.Get("X-GO-DROPBOX-USER-ID"))
+	if err != nil {
+		log.Default().Printf("Could not get user id from request. Err: %v", err)
+	}
+
+	fd := FileData{ProjectName: d["project_name"], Name: d["name"], Path: d["path"], UserId: userId}
+	err = fileManager.deleteFile(fd)
 	if err != nil {
 		message := fmt.Sprintf("server.go::deleteFile - Error deleting file: %v", err)
 		log.Default().Println(message)
