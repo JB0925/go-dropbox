@@ -414,7 +414,7 @@ func updateFile(w http.ResponseWriter, r *http.Request) {
 		UserId: userId,
 	}
 
-	if err = fileManager.update(fd, fc, userId); err != nil {
+	if err = fileManager.update(fd, userId); err != nil {
 		message := fmt.Sprintf("server.go::uploadFile - Error uploading file: %v", err)
 		log.Default().Println(message)
 		http.Error(w, err.Error(), getErrorCode(err))

@@ -411,10 +411,9 @@ func (fm *FileManager) findAndDeleteFileFromDirectories(
 	// @param filePath - string: the path from which to delete the file
 	// @param directories - map[string]interface{}: the directories that represent the project structure
 	// @return error - error: An error if one occurred, nil otherwise
-	fileName,
-	filePath string,
+	fd FileData,
 	directories map[string]interface{}) error {
-	segments := strings.Split(strings.Trim(filePath, "/"), "/")
+	segments := strings.Split(strings.Trim(fd.Path, "/"), "/")
 	log.Default().Println("files.go::delete - Segments: ", segments[0])
 	if segments[0] != "root" {
 		return ErrInvalidPath
@@ -444,7 +443,7 @@ func (fm *FileManager) findAndDeleteFileFromDirectories(
 	}
 
 	// Remove the file from the "files" array
-	fm.removeFileFromFilesArray(filesInCurrentDir, fileName, current)
+	fm.removeFileFromFilesArray(filesInCurrentDir, fd.Name, current)
 	log.Default().Println("files.go::delete - Directories: ", directories)
 	return nil
 }
@@ -470,14 +469,14 @@ func (fm *FileManager) deleteFile(fd FileData) error {
 		return err
 	}
 
-	err = fm.findAndDeleteFileFromDirectories(fd.Name, fd.Path, dirsMap)
+	err = fm.findAndDeleteFileFromDirectories(fd, dirsMap)
 	if err != nil {
 		message := fmt.Sprintf("files.go::delete - Error finding and deleting file from directories: %v", err)
 		log.Default().Println(message)
 		return err
 	}
 
-	err = fm.removeFileFromDataStore(fd.Name, fd.Path, fd.ProjectName, projectId, fd.UserId)
+	err = fm.removeFileFromDataStore(fd, projectId)
 	if err != nil {
 		message := fmt.Sprintf("files.go::delete - Error removing file from data store: %v", err)
 		log.Default().Println(message)
@@ -523,36 +522,29 @@ func (fm *FileManager) removeFileFromDataStore(
 	// This function removes a file from the database
 	// and returns an error if the file does not exist.
 	//
-	// @param: fileName string - the name of the file
+	// @param: fd FileData - the metadata of the file resource being removed
 	// @param: projectId int - the project id of the file
-	// @param: userId int - the user id of the file
-	fileName,
-	filePath,
-	projectName string,
-	projectId,
-	userId int) error {
-	_, err := fm.db.Exec(deleteFileQuery, fileName, projectName, userId, projectId, filePath)
+	fd FileData,
+	projectId int) error {
+	_, err := fm.db.Exec(deleteFileQuery, fd.Name, fd.ProjectName, fd.UserId, projectId, fd.Path)
 	if err != nil {
 		message := fmt.Sprintf("files.go::delete - Error deleting file: %v", err)
 		log.Default().Println(message)
 		return err
 	}
 
-	log.Default().Printf("files.go::delete - File %s deleted successfully", fileName)
+	log.Default().Printf("files.go::delete - File %s deleted successfully", fd.Name)
 	return nil
 }
 
 func (fm *FileManager) update(
 	fd FileData,
-	fileContent []byte,
 	userId int) error {
 	// This function updates a file in the database
 	// and returns an error if the file does not exist or
 	// if there was an error updating the file.
 	//
 	// @param fd - FileData: a struct that contains the file name, path, and project name
-	// @param fileContent - []byte: A byte array containing the contents of the updated file
-	// @param userId - int: an integer representing the user ID
 	// @return error = error: An error if one occurred, nil otherwise
 	projectId, _, err := fm.getProjectIdAndDirectories(fd)
 	if err != nil {
@@ -579,7 +571,7 @@ func (fm *FileManager) update(
 		log.Default().Printf("files.go::update - Error beginning transaction when updating file %s. Err: %v", fd.Name, err)
 	}
 
-	_, err = fm.db.Query(updateFileQuery, fileContent, timestamp, fd.Name, projectId, userId)
+	_, err = fm.db.Query(updateFileQuery, fd.Content, timestamp, fd.Name, projectId, userId)
 	if err != nil {
 		message := fmt.Sprintf("files.go::update - Error updating file: %v", err)
 		log.Default().Println(message)
