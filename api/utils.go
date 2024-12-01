@@ -125,8 +125,8 @@ func checkAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		r.Header.Set("X-GO-DROPBOX-USER", username)
-		r.Header.Set("X-GO-DROPBOX-USER-ID", userId)
+		r.Header.Set(tokenAuthUsernameKey, username)
+		r.Header.Set(tokenAuthUserIdKey, userId)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -159,7 +159,7 @@ func getErrorCode(err error) int {
 }
 
 func getAndConvertUserId(r *http.Request) (int, error) {
-	userId := r.Header.Get("X-GO-DROPBOX-USER-ID")
+	userId := r.Header.Get(tokenAuthUserIdKey)
 	id, err := strconv.Atoi(userId)
 	if err != nil {
 		return 0, fmt.Errorf("error converting user id to int: %v", err)

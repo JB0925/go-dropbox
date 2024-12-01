@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 
 	"github.com/jbrink/go-dropbox/rate_limiter"
@@ -53,6 +53,8 @@ var (
 const (
 	hashHeaderKey     = "X-GO-DROPBOX-SHARED-HASH"
 	sharerUserNameKey = "X-GO-DROPBOX-SHARER"
+	tokenAuthUsernameKey = "X-GO-DROPBOX-USER"
+	tokenAuthUserIdKey = "X-GO-DROPBOX-USER-ID"
 )
 
 func NewServer() *http.Server {
@@ -220,7 +222,7 @@ func viewProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userName := r.Header.Get("X-GO-DROPBOX-USER")
+	userName := r.Header.Get(tokenAuthUsernameKey)
 	userId, err := getAndConvertUserId(r) // get the user id from the request X-GO-DROPBOX-USER-ID header
 	if err != nil {
 		message := fmt.Sprintf("server.go::viewProject - Error converting userId to int: %v", err)
@@ -255,7 +257,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userName := r.Header.Get("X-GO-DROPBOX-USER")
+	userName := r.Header.Get(tokenAuthUsernameKey)
 	log.Default().Printf("server.go::uploadFile - User %s is uploading a file\n", userName)
 
 	userId, err := getAndConvertUserId(r)
