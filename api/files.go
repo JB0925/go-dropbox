@@ -46,8 +46,6 @@ func (fm FileManager) upload(fd FileData) error {
 	// or if there was an error uploading the file.
 	//
 	// @param: fd FileData - the file data to be uploaded, taken from the request body
-	// @param: username string - the username of the user uploading the file
-	// @param: fileContent []byte - the content of the file to be uploaded
 	// @return: An error if one exists
 	projectId, dirs, err := fm.getFileOwnerData(fd)
 	if err != nil {
@@ -102,8 +100,7 @@ func (fm FileManager) download(fd FileData) ([]byte, map[string]string, error) {
 	// This function gets the file content from the database
 	// and returns an error if the file does not exist.
 	//
-	// @param: projectName string - the name of the project
-	// @param: fileName string - the name of the file
+	// @param fd FileData - the file metadata of the file resource being operated on
 	// @return: []byte - the content of the file
 	// @return: error - An error if one exists
 	cachedFileName := fd.ProjectName+":"+fd.Name+":"+strconv.Itoa(fd.UserId)
@@ -163,8 +160,7 @@ func (fm FileManager) getProjectIdAndDirectories(fd FileData) (int, []byte, erro
 	// This function gets the project id and directories from the database
 	// and returns an error if the project does not exist.
 	//
-	// @param: projectName string - the name of the project
-	// @param: userId - the id of the user who made the request
+	// @param fd FileData - the file metadata of the file resource being operated on
 	// @return: int - the project id
 	// @return: []byte - the directories of the project
 	// @return: error - An error if one exists
@@ -220,7 +216,7 @@ func (fm *FileManager) doesFileExist(project_id int, fd FileData) (bool, error) 
 	// It also returns an error - nil if no error exists, the error if one does exist.
 	//
 	// @param: project_id int - the project id of the file
-	// @param: user_id int - the user id of the file
+	// @param: fd FileData - the file metadata of the file being checked
 	// @return: bool - true if the file exists, false if it does not
 	// @return: error - An error if one exists
 	txn, err := fm.db.Begin()
@@ -288,8 +284,7 @@ func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, fd 
 	//     Ex: {"root": {"files": [], "bar": {"files": []}}}}'}
 	//         - bar is a nested directory within the root of the project
 	//
-	// @param filePath - string: the file path at which to insert the new file name
-	// @param fileName - string: the new file name to insert
+	// @param fd FileData - contains file metadata ( name, project name, etc. ) of the resource being uploaded
 	// @return error - error: An error if one occurred, nil otherwise
 	segments := strings.Split(strings.Trim(fd.Path, "/"), "/")
 	if segments[0] != "root" {
@@ -362,7 +357,7 @@ func (fm *FileManager) getFileOwnerData(fd FileData) (int, []byte, error) {
 	// One function to get several aspects of user and project related data,
 	// such as the project id, user id, and directories.
 	//
-	// @param: projectName string - the name of the project
+	// @param: fd FileData - the file metadata of the file we are trying to get id and directories for
 	// @return: int - the project id
 	// @return: []byte - the directories of the project
 	// @return: error - An error if one exists
@@ -381,9 +376,9 @@ func (fm *FileManager) storeFile(
 	// A wrapper method used to call a database and store the contents of a file
 	// and its related metadata.
 	//
-	// @param: fd FileData - the file data to be uploaded
-	// @param: fileContent []byte - the content of the file to be uploaded
+	// @param: fd FileData - the file data and metadata to be uploaded
 	// @param: projectId int - the project id of the file
+	// @param: timestamp int64 - the timestamp at which the file was uploaded
 	// @return: error - An error if one exists
 	_, err := fm.db.Exec(
 		uploadFileQuery,
@@ -407,8 +402,7 @@ func (fm *FileManager) storeFile(
 func (fm *FileManager) findAndDeleteFileFromDirectories(
 	// Finds the file within the directory structure and deletes it.
 	//
-	// @param fileName - string: the name of the file
-	// @param filePath - string: the path from which to delete the file
+	// @param fd FileData - the metadata of the file resource being deleted
 	// @param directories - map[string]interface{}: the directories that represent the project structure
 	// @return error - error: An error if one occurred, nil otherwise
 	fd FileData,
