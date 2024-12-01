@@ -71,7 +71,7 @@ func (fm FileManager) upload(fd FileData) error {
 		return err
 	}
 
-	err = fm.findAndInsertPath(directories, fd.Path, fd.Name)
+	err = fm.findAndInsertPath(directories, fd)
 	if err != nil {
 		message := fmt.Sprintf("files.go::upload - Error finding and inserting path: %v", err)
 		log.Default().Println(message)
@@ -279,7 +279,7 @@ func (fm *FileManager) parseDirectories(directories []byte) (map[string]interfac
 	return dirs, nil
 }
 
-func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, filePath, fileName string) error {
+func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, fd FileData) error {
 	// findAndInsertPath takes a map[string]interface{}, a filePath, and a fileName
 	// The function finds <filePath> within <directories> ( or creates it if it does not exist )
 	// It then adds <fileName> into the files array in that directory.
@@ -291,7 +291,7 @@ func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, fil
 	// @param filePath - string: the file path at which to insert the new file name
 	// @param fileName - string: the new file name to insert
 	// @return error - error: An error if one occurred, nil otherwise
-	segments := strings.Split(strings.Trim(filePath, "/"), "/")
+	segments := strings.Split(strings.Trim(fd.Path, "/"), "/")
 	if segments[0] != "root" {
 		return ErrInvalidPath
 	}
@@ -314,9 +314,9 @@ func (fm *FileManager) findAndInsertPath(directories map[string]interface{}, fil
 
 	// Append the file to the "files" array - or create a new one if it does not exist
 	if files, ok := current["files"].([]interface{}); ok {
-		current["files"] = append(files, fileName)
+		current["files"] = append(files, fd.Name)
 	} else {
-		current["files"] = []interface{}{fileName}
+		current["files"] = []interface{}{fd.Name}
 	}
 
 	return nil
