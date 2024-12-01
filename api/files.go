@@ -19,6 +19,7 @@ type (
 		ProjectName string `json:"project_name"`
 		UserId      int    `json:"user_id"`
 		ProjectId   int    `json:"project_id"`
+		Content     []byte
 	}
 
 	FileManager struct {
@@ -38,7 +39,7 @@ func NewFileManager(dbUrl string) *FileManager {
 	return &FileManager{db: db}
 }
 
-func (fm FileManager) upload(fd FileData, fileContent []byte) error {
+func (fm FileManager) upload(fd FileData) error {
 	// This function checks the database for a duplicate file name
 	// and then upload the file to the database.
 	// It returns an error if the file already exists
@@ -80,7 +81,7 @@ func (fm FileManager) upload(fd FileData, fileContent []byte) error {
 	log.Default().Println("files.go::upload - Directories: ", directories)
 
 	timestamp := time.Now().Unix()
-	err = fm.storeFile(fd, fileContent, projectId, timestamp)
+	err = fm.storeFile(fd, fd.Content, projectId, timestamp)
 	if err != nil {
 		message := fmt.Sprintf("files.go::upload - Error storing file: %v", err)
 		log.Default().Println(message)

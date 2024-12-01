@@ -300,9 +300,10 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 		Path:        path,
 		ProjectName: projectName,
 		UserId: userId,
+		Content: fc,
 	}
 
-	if err = fileManager.upload(fd, fc); err != nil {
+	if err = fileManager.upload(fd); err != nil {
 		message := fmt.Sprintf("server.go::uploadFile - Error uploading file: %v", err)
 		log.Default().Println(message)
 		http.Error(w, err.Error(), getErrorCode(err))
