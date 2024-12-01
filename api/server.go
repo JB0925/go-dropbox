@@ -258,7 +258,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	userName := r.Header.Get("X-GO-DROPBOX-USER")
 	log.Default().Printf("server.go::uploadFile - User %s is uploading a file\n", userName)
 
-	userId, err := strconv.Atoi(r.Header.Get("X-GO-DROPBOX-USER-ID"))
+	userId, err := getAndConvertUserId(r)
 	if err != nil {
 		log.Default().Printf("Could not get user id for %s. Err: %v", userName, err)
 		http.Error(w, "INTERNAL SERVER ERROR", http.StatusInternalServerError)
@@ -327,15 +327,14 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 	message := fmt.Sprintf("server.go::downloadFile - Getting file %s from project %s", fileName, projectName)
 	log.Default().Println(message)
 
-	userId := r.Header.Get("X-GO-DROPBOX-USER-ID")
-	intUserId, err := strconv.Atoi(userId)
+	userId, err := getAndConvertUserId(r)
 	if err != nil {
-		log.Default().Printf("server.go::downloadFile - could not convert user id %s to int. Err: %v", userId, err)
+		log.Default().Printf("server.go::downloadFile - could not convert user id %d to int. Err: %v", userId, err)
 		http.Error(w, "INTERNAL SERVER ERROR", getErrorCode(err))
 		return
 	}
 
-	fd := FileData{Name: fileName, ProjectName: projectName, UserId: intUserId}
+	fd := FileData{Name: fileName, ProjectName: projectName, UserId: userId}
 	file, metadata, err := fileManager.download(fd)
 	if err != nil {
 		message := fmt.Sprintf("server.go::downloadFile - Error getting file: %v", err)
@@ -409,6 +408,8 @@ func updateFile(w http.ResponseWriter, r *http.Request) {
 		Name:        name,
 		ProjectName: projectName,
 		Path: path,
+		Content: fc,
+		UserId: userId,
 	}
 
 	if err = fileManager.update(fd, fc, userId); err != nil {
@@ -443,9 +444,10 @@ func deleteFile(w http.ResponseWriter, r *http.Request) {
 
 	log.Default().Println("server.go::deleteFile - Got data for delete request. Data: ", d)
 
-	userId, err := strconv.Atoi(r.Header.Get("X-GO-DROPBOX-USER-ID"))
+	userId, err := getAndConvertUserId(r)
 	if err != nil {
 		log.Default().Printf("Could not get user id from request. Err: %v", err)
+		http.Error(w, "INTERNAL SERVER ERROR", http.StatusInternalServerError)
 	}
 
 	fd := FileData{ProjectName: d["project_name"], Name: d["name"], Path: d["path"], UserId: userId}

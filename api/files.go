@@ -49,7 +49,7 @@ func (fm FileManager) upload(fd FileData) error {
 	// @param: username string - the username of the user uploading the file
 	// @param: fileContent []byte - the content of the file to be uploaded
 	// @return: An error if one exists
-	projectId, dirs, err := fm.getFileOwnerData(fd.ProjectName, fd.UserId)
+	projectId, dirs, err := fm.getFileOwnerData(fd)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func (fm FileManager) download(fd FileData) ([]byte, map[string]string, error) {
 	return data, metadata, txn.Commit()
 }
 
-func (fm FileManager) getProjectIdAndDirectories(projectName string, userId int) (int, []byte, error) {
+func (fm FileManager) getProjectIdAndDirectories(fd FileData) (int, []byte, error) {
 	// This function gets the project id and directories from the database
 	// and returns an error if the project does not exist.
 	//
@@ -168,7 +168,7 @@ func (fm FileManager) getProjectIdAndDirectories(projectName string, userId int)
 	// @return: int - the project id
 	// @return: []byte - the directories of the project
 	// @return: error - An error if one exists
-	rows, err := fm.db.Query(getProjectIdQuery, projectName, userId)
+	rows, err := fm.db.Query(getProjectIdQuery, fd.ProjectName, fd.UserId)
 	if err != nil {
 		message := fmt.Sprintf("files.go::getProjectId - Error querying database: %v", err)
 		log.Default().Println(message)
@@ -358,7 +358,7 @@ func (fm *FileManager) updateProjectStructure(
 	return txn.Commit()
 }
 
-func (fm *FileManager) getFileOwnerData(projectName string, userId int) (int, []byte, error) {
+func (fm *FileManager) getFileOwnerData(fd FileData) (int, []byte, error) {
 	// One function to get several aspects of user and project related data,
 	// such as the project id, user id, and directories.
 	//
@@ -366,7 +366,7 @@ func (fm *FileManager) getFileOwnerData(projectName string, userId int) (int, []
 	// @return: int - the project id
 	// @return: []byte - the directories of the project
 	// @return: error - An error if one exists
-	projectId, directories, err := fm.getProjectIdAndDirectories(projectName, userId)
+	projectId, directories, err := fm.getProjectIdAndDirectories(fd)
 	if err != nil {
 		return 0, []byte{}, err
 	}
@@ -459,7 +459,7 @@ func (fm *FileManager) deleteFile(fd FileData) error {
 	// @param: filePath string - the path of the file
 	// @param: userName string - the username of the user
 	// @return: error - An error if one exists
-	projectId, dirs, err := fm.getFileOwnerData(fd.ProjectName, fd.UserId)
+	projectId, dirs, err := fm.getFileOwnerData(fd)
 	if err != nil {
 		return err
 	}
@@ -555,7 +555,7 @@ func (fm *FileManager) update(
 	// @param fileContent - []byte: A byte array containing the contents of the updated file
 	// @param userId - int: an integer representing the user ID
 	// @return error = error: An error if one occurred, nil otherwise
-	projectId, _, err := fm.getProjectIdAndDirectories(fd.ProjectName, userId)
+	projectId, _, err := fm.getProjectIdAndDirectories(fd)
 	if err != nil {
 		msg := fmt.Errorf("files.go::update - Error getting project id with project name %s. Error: %w", fd.ProjectName, err)
 		log.Default().Println(msg)
