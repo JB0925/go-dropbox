@@ -166,9 +166,7 @@ func (fm FileManager) getProjectIdAndDirectories(fd FileData) (int, []byte, erro
 	// @return: error - An error if one exists
 	rows, err := fm.db.Query(getProjectIdQuery, fd.ProjectName, fd.UserId)
 	if err != nil {
-		message := fmt.Sprintf("files.go::getProjectId - Error querying database: %v", err)
-		log.Default().Println(message)
-		return 0, []byte{}, err
+		return 0, []byte{}, fmt.Errorf("files.go::getProjectId - Error querying database: %w", err)
 	}
 
 	defer rows.Close()
@@ -178,9 +176,7 @@ func (fm FileManager) getProjectIdAndDirectories(fd FileData) (int, []byte, erro
 	if rows.Next() {
 		err = rows.Scan(&projectId, &directories)
 		if err != nil {
-			message := fmt.Sprintf("files.go::getProjectId - Error scanning database: %v", err)
-			log.Default().Println(message)
-			return 0, []byte{}, err
+			return 0, []byte{}, fmt.Errorf("files.go::getProjectId - Error scanning database: %w", err)
 		}
 
 		return projectId, directories, nil
@@ -201,9 +197,7 @@ func (fm *FileManager) getUserId(username string) (int, error) {
 	var userId int
 	err := fm.db.QueryRow(getUserQuery, username).Scan(&userId)
 	if err != nil {
-		message := fmt.Sprintf("files.go::getUserId - Error querying database: %v", err)
-		log.Default().Println(message)
-		return 0, err
+		return 0, fmt.Errorf("files.go::getUserId - Error querying database: %v", err)
 	}
 
 	return userId, nil
@@ -221,13 +215,11 @@ func (fm *FileManager) doesFileExist(project_id int, fd FileData) (bool, error) 
 	// @return: error - An error if one exists
 	txn, err := fm.db.Begin()
 	if err != nil {
-		log.Default().Printf("files.go::doesFileExist - Error beginning transaction: %v", err)
+		return false, fmt.Errorf("files.go::doesFileExist - Error beginning transaction: %w", err)
 	}
 	rows, err := fm.db.Query(checkFileExistsQuery, project_id, fd.UserId, fd.Name, fd.Path)
 	if err != nil {
-		message := fmt.Sprintf("files.go::doesFileExist - Error querying database: %v", err)
-		log.Default().Println(message)
-		return false, err
+		return false, fmt.Errorf("files.go::doesFileExist - Error querying database: %w", err)
 	}
 
 	defer rows.Close()
@@ -248,9 +240,7 @@ func (fm *FileManager) getDirectories(projectId int) ([]byte, error) {
 	var directories []byte
 	err := fm.db.QueryRow(getProjectDirectoriesQuery, projectId).Scan(&directories)
 	if err != nil {
-		message := fmt.Sprintf("files.go::getDirectories - Error querying database: %v", err)
-		log.Default().Println(message)
-		return nil, err
+		return nil, fmt.Errorf("files.go::getDirectories - Error querying database: %w", err)
 	}
 
 	return directories, nil
@@ -267,9 +257,7 @@ func (fm *FileManager) parseDirectories(directories []byte) (map[string]interfac
 	err := json.Unmarshal(directories, &dirs)
 
 	if err != nil {
-		message := fmt.Sprintf("files.go::parseDirectories - Error unmarshalling directories: %v", err)
-		log.Default().Println(message)
-		return nil, err
+		return nil, fmt.Errorf("files.go::parseDirectories - Error unmarshalling directories: %w", err)
 	}
 
 	return dirs, nil
@@ -331,14 +319,12 @@ func (fm *FileManager) updateProjectStructure(
 	// This function updates the project structure in the database
 	directoriesToJson, err := json.Marshal(directories)
 	if err != nil {
-		message := fmt.Sprintf("files.go::updateProjectStructure - Error marshalling directories: %v", err)
-		log.Default().Println(message)
-		return err
+		return fmt.Errorf("files.go::updateProjectStructure - Error marshalling directories: %w", err)
 	}
 
 	txn, err := fm.db.Begin()
 	if err != nil {
-		log.Default().Printf("files.go::updateProjectStructure - Error beginning transaction: %v", err)
+		return fmt.Errorf("files.go::updateProjectStructure - Error beginning transaction: %w", err)
 	}
 	_, err = fm.db.Exec(updateProjectDirectoryQuery, directoriesToJson, projectId, timestamp)
 	if err != nil {
@@ -391,9 +377,7 @@ func (fm *FileManager) storeFile(
 		timestamp)
 
 	if err != nil {
-		message := fmt.Sprintf("files.go::upload - Error uploading file: %v", err)
-		log.Default().Println(message)
-		return err
+		return fmt.Errorf("files.go::upload - Error uploading file: %v", err)
 	}
 
 	return nil
@@ -408,14 +392,12 @@ func (fm *FileManager) findAndDeleteFileFromDirectories(
 	fd FileData,
 	directories map[string]interface{}) error {
 	segments := strings.Split(strings.Trim(fd.Path, "/"), "/")
-	log.Default().Println("files.go::delete - Segments: ", segments[0])
 	if segments[0] != "root" {
 		return ErrInvalidPath
 	}
 
 	// Traverse the directories map to find the correct path
 	current := directories
-	log.Default().Println("files.go::delete - Current at Start: ", current)
 
 	// Loop over each directory in the file path that the user gave
 	for _, segment := range segments {
@@ -438,7 +420,6 @@ func (fm *FileManager) findAndDeleteFileFromDirectories(
 
 	// Remove the file from the "files" array
 	fm.removeFileFromFilesArray(filesInCurrentDir, fd.Name, current)
-	log.Default().Println("files.go::delete - Directories: ", directories)
 	return nil
 }
 
@@ -458,30 +439,22 @@ func (fm *FileManager) deleteFile(fd FileData) error {
 
 	dirsMap, err := fm.parseDirectories(dirs)
 	if err != nil {
-		message := fmt.Sprintf("files.go::delete - Error parsing directories: %v", err)
-		log.Default().Println(message)
-		return err
+		return fmt.Errorf("files.go::delete - Error parsing directories: %w", err)
 	}
 
 	err = fm.findAndDeleteFileFromDirectories(fd, dirsMap)
 	if err != nil {
-		message := fmt.Sprintf("files.go::delete - Error finding and deleting file from directories: %v", err)
-		log.Default().Println(message)
-		return err
+		return fmt.Errorf("files.go::delete - Error finding and deleting file from directories: %w", err)
 	}
 
 	err = fm.removeFileFromDataStore(fd, projectId)
 	if err != nil {
-		message := fmt.Sprintf("files.go::delete - Error removing file from data store: %v", err)
-		log.Default().Println(message)
-		return err
+		return fmt.Errorf("files.go::delete - Error removing file from data store: %w", err)
 	}
 
 	err = fm.updateProjectStructure(projectId, dirsMap, time.Now().Unix())
 	if err != nil {
-		message := fmt.Sprintf("files.go::delete - Error updating project structure: %v", err)
-		log.Default().Println(message)
-		return err
+		return fmt.Errorf("files.go::delete - Error updating project structure: %w", err)
 	}
 
 	cachedFileName := fd.ProjectName+":"+fd.Name+":"+strconv.Itoa(fd.UserId)
@@ -522,9 +495,7 @@ func (fm *FileManager) removeFileFromDataStore(
 	projectId int) error {
 	_, err := fm.db.Exec(deleteFileQuery, fd.Name, fd.ProjectName, fd.UserId, projectId, fd.Path)
 	if err != nil {
-		message := fmt.Sprintf("files.go::delete - Error deleting file: %v", err)
-		log.Default().Println(message)
-		return err
+		return fmt.Errorf("files.go::delete - Error deleting file: %w", err)
 	}
 
 	log.Default().Printf("files.go::delete - File %s deleted successfully", fd.Name)
