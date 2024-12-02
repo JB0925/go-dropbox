@@ -78,9 +78,7 @@ func (pm *ProjectManager) getUserId(username string) (int, error) {
 	var userId int
 	err := pm.db.QueryRow(getUserQuery, username).Scan(&userId)
 	if err != nil {
-		message := fmt.Sprintf("projects.go::getUserId - Error querying database: %v", err)
-		log.Default().Println(message)
-		return 0, err
+		return 0, fmt.Errorf("projects.go::getUserId - Error querying database: %w", err)
 	}
 
 	return userId, nil
