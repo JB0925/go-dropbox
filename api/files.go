@@ -76,8 +76,6 @@ func (fm FileManager) upload(fd FileData) error {
 		return err
 	}
 
-	log.Default().Println("files.go::upload - Directories: ", directories)
-
 	timestamp := time.Now().Unix()
 	err = fm.storeFile(fd, projectId, timestamp)
 	if err != nil {
