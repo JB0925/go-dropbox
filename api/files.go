@@ -51,31 +51,14 @@ func (fm FileManager) upload(fd FileData) error {
 	if err != nil {
 		return err
 	}
-
 	exists, err := fm.doesFileExist(projectId, fd)
 	if err != nil {
 		return err
 	}
-
 	if exists {
 		log.Default().Println("files.go::upload - File already exists")
 		return ErrorFileAlreadyExists
 	}
-
-	directories, err := fm.parseDirectories(dirs)
-	if err != nil {
-		message := fmt.Sprintf("files.go::upload - Error parsing directories: %v", err)
-		log.Default().Println(message)
-		return err
-	}
-
-	err = fm.findAndInsertPath(directories, fd)
-	if err != nil {
-		message := fmt.Sprintf("files.go::upload - Error finding and inserting path: %v", err)
-		log.Default().Println(message)
-		return err
-	}
-
 	timestamp := time.Now().Unix()
 	err = fm.storeFile(fd, projectId, timestamp)
 	if err != nil {
@@ -83,8 +66,7 @@ func (fm FileManager) upload(fd FileData) error {
 		log.Default().Println(message)
 		return err
 	}
-
-	err = fm.updateProjectStructure(projectId, directories, timestamp)
+	err = fm.updateProjectStructure(projectId, dirs, timestamp, fm.findAndInsertPath, fd)
 	if err != nil {
 		message := fmt.Sprintf("files.go::upload - Error updating project structure: %v", err)
 		log.Default().Println(message)
@@ -308,14 +290,30 @@ func (fm *FileManager) updateProjectStructure(
 	// and updates it in the database.
 	//
 	// @param projectId - int: the id of the project
-	// @param directories - map[string]interface{} - the directories that make up the project
+	// @param directories - []byte - the directories that make up the project
 	// @param timestamp - int64: a Unix timestamp that represents when the project was updated
+	// @param dirsModifier - func(map[string]interface{}, FileData) error: a function that adds or removes a file from the directories mapping
+	// @param fd - FileData: metadata about the file such as file name, project name, etc.
 	// @return error - error: An error if one occurred, nil otherwise
 	projectId int,
-	directories map[string]interface{},
-	timestamp int64) error {
+	directories []byte,
+	timestamp int64,
+	dirsModifier func(map[string]interface{}, FileData) error,
+	fd FileData) error {
 	// This function updates the project structure in the database
-	directoriesToJson, err := json.Marshal(directories)
+	dirs, err := fm.parseDirectories(directories)
+	if err != nil {
+		message := fmt.Sprintf("files.go::upload - Error parsing directories: %v", err)
+		log.Default().Println(message)
+		return err
+	}
+	err = dirsModifier(dirs, fd)
+	if err != nil {
+		message := fmt.Sprintf("files.go::upload - Error finding and inserting path: %v", err)
+		log.Default().Println(message)
+		return err
+	}
+	directoriesToJson, err := json.Marshal(dirs)
 	if err != nil {
 		return fmt.Errorf("files.go::updateProjectStructure - Error marshalling directories: %w", err)
 	}
@@ -387,8 +385,8 @@ func (fm *FileManager) findAndDeleteFileFromDirectories(
 	// @param fd FileData - the metadata of the file resource being deleted
 	// @param directories - map[string]interface{}: the directories that represent the project structure
 	// @return error - error: An error if one occurred, nil otherwise
-	fd FileData,
-	directories map[string]interface{}) error {
+	directories map[string]interface{},
+	fd FileData) error {
 	segments := strings.Split(strings.Trim(fd.Path, "/"), "/")
 	if segments[0] != "root" {
 		return ErrInvalidPath
@@ -434,27 +432,14 @@ func (fm *FileManager) deleteFile(fd FileData) error {
 	if err != nil {
 		return err
 	}
-
-	dirsMap, err := fm.parseDirectories(dirs)
-	if err != nil {
-		return fmt.Errorf("files.go::delete - Error parsing directories: %w", err)
-	}
-
-	err = fm.findAndDeleteFileFromDirectories(fd, dirsMap)
-	if err != nil {
-		return fmt.Errorf("files.go::delete - Error finding and deleting file from directories: %w", err)
-	}
-
 	err = fm.removeFileFromDataStore(fd, projectId)
 	if err != nil {
 		return fmt.Errorf("files.go::delete - Error removing file from data store: %w", err)
 	}
-
-	err = fm.updateProjectStructure(projectId, dirsMap, time.Now().Unix())
+	err = fm.updateProjectStructure(projectId, dirs, time.Now().Unix(), fm.findAndDeleteFileFromDirectories, fd)
 	if err != nil {
 		return fmt.Errorf("files.go::delete - Error updating project structure: %w", err)
 	}
-
 	cachedFileName := fd.ProjectName+":"+fd.Name+":"+strconv.Itoa(fd.UserId)
 	cachedFileMetaData := cachedFileName+"-metadata"
 	if err := redisClient.deleteFileAndMetadataFromRedisCache(cachedFileName, cachedFileMetaData); err != nil {
